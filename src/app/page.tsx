@@ -42,7 +42,7 @@ export default function Home() {
       <FullScreenOverlay />
 
       {/* Floating Header */}
-      <nav className="fixed top-0 inset-x-0 z-30 h-16 md:h-20 flex items-center justify-between px-6 md:px-8 bg-transparent">
+      <nav className="fixed top-0 inset-x-0 z-50 h-16 md:h-20 flex items-center justify-between px-6 md:px-8 bg-transparent">
         <div className="flex items-center gap-4">
             <button
                 onClick={() => {
@@ -83,6 +83,8 @@ export default function Home() {
                                     onClick={() => {
                                         setColorTheme(option.id as 'red' | 'blue' | 'green');
                                         setIsColorPickerOpen(false);
+                                        // Force reload to apply theme as requested by user
+                                        setTimeout(() => window.location.reload(), 50);
                                     }}
                                     className={clsx(
                                         "flex items-center gap-3 p-2 rounded-xl transition-all text-sm font-medium",

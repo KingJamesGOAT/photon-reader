@@ -42,7 +42,7 @@ export const TableOfContents = () => {
                     "inset-x-4 bottom-4 md:inset-auto md:right-4 md:top-24",
                     isOpen 
                         ? "translate-y-0 opacity-100" 
-                        : "translate-y-full opacity-0 md:translate-y-0 md:translate-x-[calc(100%+20px)] md:opacity-0 pointer-events-none md:pointer-events-auto"
+                        : "translate-y-full opacity-0 md:translate-y-0 md:translate-x-[calc(100%+20px)] md:opacity-100 pointer-events-none md:pointer-events-auto"
                 )}
             >
                 <div className={clsx(
@@ -118,7 +118,7 @@ export const TableOfContents = () => {
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     className={clsx(
-                        "hidden md:block absolute top-6 -left-10 p-2 rounded-l-xl bg-white dark:bg-neutral-900 border-y border-l border-neutral-200 dark:border-neutral-800 shadow-md text-neutral-500 hover:text-brand-500 transition-colors",
+                        "hidden md:block absolute top-32 -left-10 p-2 rounded-l-xl bg-white dark:bg-neutral-900 border-y border-l border-neutral-200 dark:border-neutral-800 shadow-md text-neutral-500 hover:text-brand-500 transition-colors",
                         !isOpen && "translate-x-1"
                     )}
                 >
