@@ -165,8 +165,12 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased selection:bg-red-500/30 selection:text-red-500;
+    @apply bg-background text-foreground font-sans antialiased selection:bg-brand-500/30 selection:text-brand-600;
   }
+}
+
+* {
+  @apply transition-colors duration-300;
 }
 
 @layer utilities {

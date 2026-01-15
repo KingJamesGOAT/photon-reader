@@ -20,9 +20,30 @@ export default function Home() {
     restoreSession();
   }, [restoreSession]);
 
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+        if (e.code === 'Space') {
+            e.preventDefault();
+            useStore.getState().setIsPlaying(!useStore.getState().isPlaying);
+        } else if (e.code === 'ArrowUp') {
+            e.preventDefault();
+            useStore.getState().setWpm(Math.min(1000, useStore.getState().wpm + 25));
+        } else if (e.code === 'ArrowDown') {
+            e.preventDefault();
+            useStore.getState().setWpm(Math.max(100, useStore.getState().wpm - 25));
+        }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <main className={clsx(
-        "flex min-h-screen flex-col items-center justify-center relative overflow-x-hidden transition-colors duration-500",
+        "flex min-h-screen flex-col items-center justify-center relative overflow-x-hidden transition-colors duration-700",
         "bg-background text-foreground"
     )}>
       
@@ -56,7 +77,7 @@ export default function Home() {
                 <Menu size={24} className="text-foreground" />
             </button>
 
-            <button onClick={goHome} className="flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
+            <button onClick={goHome} className="flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity" aria-label="Go home">
                 <span className="font-bold tracking-tight text-xl">PhotonReader</span>
             </button>
         </div>
@@ -66,6 +87,7 @@ export default function Home() {
                 <button 
                     onClick={() => setIsColorPickerOpen(!isColorPickerOpen)}
                     className="p-2 rounded-full hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors"
+                    aria-label="Change color theme"
                 >
                     <Palette size={20} className="text-foreground opacity-80" />
                 </button>
@@ -84,11 +106,9 @@ export default function Home() {
                                     onClick={() => {
                                         setColorTheme(option.id as 'red' | 'blue' | 'green');
                                         setIsColorPickerOpen(false);
-                                        // Force reload to apply theme as requested by user
-                                        setTimeout(() => window.location.reload(), 50);
                                     }}
                                     className={clsx(
-                                        "flex items-center gap-3 p-2 rounded-xl transition-all text-sm font-medium",
+                                        "flex items-center gap-3 p-2.5 rounded-xl transition-all text-sm font-medium",
                                         colorTheme === option.id 
                                             ? "bg-neutral-100 dark:bg-neutral-800 text-foreground" 
                                             : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900 hover:text-foreground"
@@ -107,7 +127,7 @@ export default function Home() {
             <button 
                 onClick={toggleTheme}
                 className="p-2 rounded-full hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors"
-                aria-label="Toggle Theme"
+                aria-label="Toggle dark mode"
             >
                 {theme === 'dark' ? <Sun size={20} className="text-white" /> : <Moon size={20} />}
             </button>
