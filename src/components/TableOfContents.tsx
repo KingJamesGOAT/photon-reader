@@ -34,11 +34,18 @@ export const TableOfContents = () => {
     return (
         <div 
             className={clsx(
-                "fixed right-4 top-24 z-40 transition-all duration-300 ease-in-out",
-                isOpen ? "translate-x-0" : "translate-x-[calc(100%+20px)]"
+                "fixed transition-all duration-300 ease-in-out z-40",
+                // Mobile: Centered bottom-sheet style or full screen
+                "inset-x-4 bottom-4 md:inset-auto md:right-4 md:top-24",
+                isOpen 
+                    ? "translate-y-0 opacity-100" 
+                    : "translate-y-full opacity-0 md:translate-y-0 md:translate-x-[calc(100%+20px)] md:opacity-0 pointer-events-none md:pointer-events-auto"
             )}
         >
-            <div className="bg-white/90 dark:bg-black/80 backdrop-blur-md border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl w-72 max-h-[calc(100vh-120px)] flex flex-col overflow-hidden">
+            <div className={clsx(
+                "bg-white/95 dark:bg-black/90 backdrop-blur-md border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all",
+                "w-full md:w-72 max-h-[80vh] md:max-h-[calc(100vh-120px)]"
+            )}>
                 
                 {/* Header */}
                 <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50">
@@ -46,7 +53,13 @@ export const TableOfContents = () => {
                         <List size={16} className="text-red-500" />
                         Contents ({totalTime})
                     </h3>
-                    <div className="text-xs text-neutral-400">
+                    <button 
+                        onClick={() => setIsOpen(false)}
+                        className="md:hidden p-1 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-full"
+                    >
+                        <ChevronRight size={18} className="rotate-90" />
+                    </button>
+                    <div className="hidden md:block text-xs text-neutral-400">
                         {chapters.length} Section{chapters.length !== 1 ? 's' : ''}
                     </div>
                 </div>
@@ -60,7 +73,10 @@ export const TableOfContents = () => {
                         return (
                             <button
                                 key={i}
-                                onClick={() => setCurrentIndex(chapter.startIndex)}
+                                onClick={() => {
+                                    setCurrentIndex(chapter.startIndex);
+                                    if (window.innerWidth < 768) setIsOpen(false);
+                                }}
                                 className={clsx(
                                     "w-full text-left p-3 rounded-xl transition-all duration-200 group relative",
                                     isActive 
@@ -89,24 +105,33 @@ export const TableOfContents = () => {
                                         </div>
                                     )}
                                 </div>
-                                
-                                {/* Progress Bar for Chapter could go here if needed per chapter */}
                             </button>
                         );
                     })}
                 </div>
             </div>
 
-            {/* Toggle Button */}
+            {/* Toggle Button - Only Desktop */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={clsx(
-                    "absolute top-6 -left-10 p-2 rounded-l-xl bg-white dark:bg-neutral-900 border-y border-l border-neutral-200 dark:border-neutral-800 shadow-md text-neutral-500 hover:text-red-500 transition-colors",
-                    !isOpen && "translate-x-1" // Hint it's there
+                    "hidden md:block absolute top-6 -left-10 p-2 rounded-l-xl bg-white dark:bg-neutral-900 border-y border-l border-neutral-200 dark:border-neutral-800 shadow-md text-neutral-500 hover:text-red-500 transition-colors",
+                    !isOpen && "translate-x-1"
                 )}
             >
                 {isOpen ? <ChevronRight size={18} /> : <List size={18} />}
             </button>
+
+            {/* Mobile Toggle Trigger (Floating Action Button style for TOC) */}
+            {!isOpen && (
+                <button
+                    onClick={() => setIsOpen(true)}
+                    className="md:hidden fixed bottom-6 right-6 p-4 rounded-full bg-red-500 text-white shadow-xl flex items-center justify-center animate-in zoom-in duration-300"
+                    aria-label="Open Contents"
+                >
+                    <List size={24} />
+                </button>
+            )}
         </div>
     );
 };

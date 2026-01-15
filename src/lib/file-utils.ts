@@ -23,7 +23,7 @@ export interface ProcessedText {
 //        .trim();
 // };
 
-const detectChapters = (fullText: string): { words: string[], chapters: Chapter[] } => {
+export const detectChapters = (fullText: string): { words: string[], chapters: Chapter[] } => {
     const words = fullText.split(/\s+/).filter(w => w.length > 0);
     const countWords = (str: string) => str.split(/\s+/).filter(w => w.length > 0).length;
 

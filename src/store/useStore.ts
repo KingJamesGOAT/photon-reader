@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { detectChapters } from '@/lib/file-utils';
 
 const DEFAULT_CONTENT_TEXT = "Welcome to PhotonReader. This is a live demo of Rapid Serial Visual Presentation. By displaying words one at a time, we eliminate eye movement, allowing you to read at double or triple your normal speed. Upload your own PDF below to get started.";
 const DEFAULT_CONTENT = DEFAULT_CONTENT_TEXT.split(" ");
@@ -152,9 +153,7 @@ export const useStore = create<AppState>()(
       
       loadRecentFile: (file) => {
           if (file.fullText) {
-              const words = file.fullText.split(/\s+/).filter(word => word.length > 0);
-              // Default if no chapters in stored file
-              const chapters = file.chapters || [{ title: 'Chapter 1', startIndex: 0, wordCount: words.length }];
+              const { words, chapters } = detectChapters(file.fullText);
               
               set({ 
                   content: words, 
