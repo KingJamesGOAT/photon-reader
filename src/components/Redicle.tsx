@@ -29,7 +29,7 @@ export const Redicle = () => {
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[2px] h-[40px] md:h-[20px] bg-foreground transition-colors duration-300" />
 
             {/* Word Display */}
-            <div className="flex text-5xl sm:text-7xl md:text-8xl font-sans tracking-tight relative z-20 select-none w-full px-4 leading-none">
+            <div className="flex text-5xl sm:text-7xl md:text-8xl font-sans tracking-normal relative z-20 select-none w-full px-4 leading-none">
                 {/* Left side: forced to 50% width to push pivot to center */}
                 <div className="flex-1 flex justify-end overflow-visible whitespace-nowrap">
                     <span className="text-foreground transition-colors duration-300">
@@ -38,7 +38,7 @@ export const Redicle = () => {
                 </div>
                 
                 {/* Pivot character: exactly in the middle */}
-                <div className="flex-none flex justify-center w-[0.6ch] sm:w-[0.8ch]">
+                <div className="flex-none flex justify-center min-w-[0.7ch] sm:min-w-[0.9ch]">
                     <span className="text-brand-600 font-bold transition-colors duration-300">
                         {pivotChar}
                     </span>
