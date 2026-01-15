@@ -42,26 +42,10 @@ const processedToWords = (cleanedText: string): string[] => {
 };
 
 export const detectChapters = (fullText: string): { words: string[], chapters: Chapter[] } => {
-    // Strategy: Visual TOC -> Page Map
-    // 1. We tokenize the full text to get a word count map.
-    // 2. We search for a "Contents" page early in the document.
-    // 3. We parse "Chapter Title ... PageNum" lines.
-    // 4. We map PageNum to the actual word index from the fullText.
+    // Strategy: Fallback Text Heuristic
+    // Used when Font Analysis fails (e.g. simple text file or uniform font PDF)
     
-    // Note: To map PageNum -> WordIndex accurately, we really need the per-page word counts.
-    // BUT this function `detectChapters` only receives `fullText`. 
-    // This is a limitation. Ideally, it should receive the `pageTextData` from `extractTextFromPDF`.
-    // However, for now, we will use a "Text Search" fallback for page numbers if valid, 
-    // OR we relies on the fact that `extractTextFromPDF` actually has the data and SHOULD handle this logic.
-    
-    // REFACTOR: `detectChapters` should mainly be for TXT files or fallback.
-    // The robust PDF logic should live in `extractTextFromPDF`.
-    
-    // However, since I am editing `detectChapters` which is called by `extractTextFromPDF`'s fallback...
-    // I will implement the *Text-Based* Visual TOC here (searching for text titles),
-    // AND I will add the *Page-Based* Visual TOC inside `extractTextFromPDF` directly.
-    
-    // So here, I will just keep a robust text-scanning heuristic for now.
+    // REFACTOR: This is the fallback "Text Scan" method.
     
     const words = processedToWords(fullText);
     const chapters: { title: string, index: number }[] = [];
@@ -128,36 +112,6 @@ export const detectChapters = (fullText: string): { words: string[], chapters: C
 // Extractors
 // ---------------------------
 
-// Helper to reconstruct page text visually based on coordinates
-// This is critical for reading parsed TOC pages correctly, as standard text extraction
-// often flattens vertical columns or messes up newline detection.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const extractPageTextVisually = (items: any[]): string => {
-    // 1. Group items by Y-coordinate (Lines)
-    const lines: { y: number, items: any[] }[] = [];
-    const yTolerance = 5; // Pixels tolerance for same line
-
-    items.forEach(item => {
-        const y = item.transform[5]; // Transform[5] is the Y position
-        // Find an existing line that matches this Y
-        const line = lines.find(l => Math.abs(l.y - y) < yTolerance);
-        if (line) {
-            line.items.push(item);
-        } else {
-            lines.push({ y, items: [item] });
-        }
-    });
-
-    // 2. Sort Lines Top-to-Bottom (PDF Y usually goes up, so Descending Y is Top-to-Bottom)
-    lines.sort((a, b) => b.y - a.y);
-
-    // 3. Sort Items Left-to-Right and Join
-    return lines.map(line => {
-        line.items.sort((a, b) => a.transform[4] - b.transform[4]); // Sort by X
-        return line.items.map(item => item.str).join(' ');
-    }).join('\n');
-};
-
 export const extractTextFromTXT = async (file: File): Promise<ProcessedText> => {
     const text = await file.text();
     const cleaned = cleanText(text);
@@ -165,9 +119,6 @@ export const extractTextFromTXT = async (file: File): Promise<ProcessedText> => 
     const { chapters } = detectChapters(text); // Use raw text for detection structure
     
     // Fix up chapter word counts/indices based on cleaned words
-    // For TXT, accurate mapping is hard without keeping offsets. 
-    // We'll trust the fallback heuristic which recalculates based on clean text.
-    
     return {
         words,
         chapters,
@@ -188,244 +139,164 @@ export const extractTextFromPDF = async (file: File): Promise<ProcessedText> => 
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
       
+      // Data containers
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let globalItems: any[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const allPageItems: { items: any[], text: string }[] = [];
       let fullRawTextForFallback = '';
-      const pageTextData: { pageIndex: number, text: string, rawText: string, wordCount: number }[] = [];
-      let totalWordCount = 0;
-
-      // 1. Extract Text Per Page
+      
+      // ---------------------------------------------------------
+      // PASS 1: Extract All Items & Text
+      // ---------------------------------------------------------
       for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        
-        // 1. Create a version specifically for TOC detection (preserves newlines via visual coordinates)
-        const pageTocText = extractPageTextVisually(textContent.items);
-
-        // 2. Create the standard reading version (preserves flow)
-        const pageRawText = textContent.items
-          // @ts-expect-error item type mismatch
-          .map((item) => item.str)
-          .join(' '); 
-        
-        const pageCleanedText = cleanText(pageRawText);
-        const pageWords = processedToWords(pageCleanedText);
-        
-        pageTextData.push({
-            pageIndex: i, // 1-based
-            text: pageCleanedText,
-            rawText: pageTocText, // STORE THE NEWLINE VERSION HERE for TOC detection
-            wordCount: pageWords.length
-        });
-        
-        totalWordCount += pageWords.length;
-        fullRawTextForFallback += pageRawText + '\n\n';
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const items = textContent.items as any[];
+          
+          globalItems = globalItems.concat(items);
+          
+          const pageRawText = items.map(item => item.str).join(' ');
+          const pageCleanedText = cleanText(pageRawText);
+          
+          allPageItems.push({
+              items,
+              text: pageCleanedText
+          });
+          
+          fullRawTextForFallback += pageRawText + '\n\n';
       }
 
-      // 2. Try to get Native Outline
-      const outline = await pdf.getOutline();
-      let chapters: Chapter[] = [];
+      // ---------------------------------------------------------
+      // PASS 2: Font Statistics (Find Body Text Size)
+      // ---------------------------------------------------------
+      const heightCounts: Record<number, number> = {};
+      globalItems.forEach(item => {
+           // item.transform[0] is usually font size (if unrotated)
+           // Round to 2 decimals to group effectively
+           const h = Math.round(item.transform[0] * 100) / 100;
+           if (h > 0) heightCounts[h] = (heightCounts[h] || 0) + 1;
+      });
+      
+      let bodyHeight = 0;
+      let maxCount = 0;
+      for (const hStr in heightCounts) {
+          const count = heightCounts[hStr];
+          if (count > maxCount) {
+              maxCount = count;
+              bodyHeight = parseFloat(hStr);
+          }
+      }
+      
+      console.log(`[PDF Analysis] Body Font Size: ${bodyHeight}. Threshold for Header: ${bodyHeight * 1.15}`);
 
-          if (outline && outline.length > 0) {
-          console.log("PDF Outline Found:", outline);
+      // ---------------------------------------------------------
+      // PASS 3: Detect Headers & Build Chapters
+      // ---------------------------------------------------------
+      const detectedChapters: Chapter[] = [];
+      let currentWordTotal = 0;
+      
+      // Threshold: Text significantly larger than body is a header
+      // e.g., 15% larger
+      const isHeader = (h: number) => h > bodyHeight * 1.15;
+
+      for (const pageData of allPageItems) {
+          const pageWords = processedToWords(pageData.text);
+          const pageTotalWords = pageWords.length;
           
-          // Helper to flatten outline and map to word index
-          // Outline items have { title, dest }
-          // We need to resolve 'dest' to a page number.
-          
-          for (const item of outline) {
-              let targetPageIndex = -1; // 1-based
+          // Scan items on this page
+          for (let i = 0; i < pageData.items.length; i++) {
+              const item = pageData.items[i];
+              const h = Math.round(item.transform[0] * 100) / 100;
               
-              try {
-                  if (typeof item.dest === 'string') {
-                      const dest = await pdf.getDestination(item.dest);
-                      if (dest) {
-                          const ref = dest[0]; // Ref object
-                          const pageIndex = await pdf.getPageIndex(ref);
-                          targetPageIndex = pageIndex + 1;
-                      }
-                  } else if (Array.isArray(item.dest)) {
-                       const ref = item.dest[0];
-                       const pageIndex = await pdf.getPageIndex(ref);
-                       targetPageIndex = pageIndex + 1;
-                  }
-              } catch {
-                  console.warn("Could not resolve outline destination", item);
-              }
+              if (isHeader(h) && item.str.trim().length > 1) { // Ignore single stray chars
+                   const title = item.str.trim();
+                   
+                   // Check if we should merge with previous chapter (if it was very recent/consecutive)
+                   const prevChapter = detectedChapters[detectedChapters.length - 1];
+                   
+                   // Heuristic: If previous chapter has same start index (same page, near same spot?) 
+                   // OR if we just added it?
+                   
+                   // Simplifying: 
+                   // To find the exact word index of THIS item is hard because `cleanText` shifts everything.
+                   // Approximation: 
+                   // Calculate words in the text BEFORE this item on this page.
+                   const rawTextBefore = pageData.items.slice(0, i).map(it => it.str).join(' ');
+                   const wordsBefore = processedToWords(cleanText(rawTextBefore)).length;
+                   
+                   const startIndex = currentWordTotal + wordsBefore;
 
-              if (targetPageIndex > 0) {
-                  // Calculate start index based on cumulative word counts of previous pages
-                  // pageTextData is 0-indexed array, representing pages 1..N
-                  let startIndex = 0;
-                  for (let p = 0; p < targetPageIndex - 1; p++) {
-                      startIndex += pageTextData[p].wordCount;
-                  }
-                  
-                  chapters.push({
-                      title: item.title,
-                      startIndex: startIndex,
-                      // We'll calculate wordCount relative to next chapter later
-                      wordCount: 0 
-                  });
+                   // Validation: Don't add if very close to previous (likely multi-line title)
+                   if (prevChapter && startIndex - prevChapter.startIndex < 20) {
+                        // Merge title
+                        prevChapter.title += ' ' + title;
+                   } else {
+                       // New Chapter
+                       detectedChapters.push({
+                           title: title,
+                           startIndex: startIndex,
+                           wordCount: 0 
+                       });
+                   }
               }
           }
           
-          // Post-process chapters to set lengths
-          chapters.sort((a, b) => a.startIndex - b.startIndex);
-          // Filter duplicates (some PDFs have multiple bookmarks to same page)
-          chapters = chapters.filter((c, index, self) => 
-            index === 0 || c.startIndex > self[index - 1].startIndex
-          );
+          currentWordTotal += pageTotalWords;
+      }
 
-          // Calculate word counts
-          for (let i = 0; i < chapters.length; i++) {
-              const current = chapters[i];
-              const next = chapters[i + 1];
+      // ---------------------------------------------------------
+      // PASS 4: Post-Process & Fallback
+      // ---------------------------------------------------------
+      
+      let finalChapters = detectedChapters;
+
+      // Filter: Clean up titles
+      finalChapters = finalChapters.map(c => ({
+          ...c,
+          title: c.title.replace(/\s+/g, ' ').trim()
+      }));
+
+      // Filter: Remove "Chapter" if it's just the word alone? No, "Chapter 1" logic handles merged.
+
+      // FALLBACK: If we didn't find reasonable chapters (e.g. font size is uniform), use Text Heuristic
+      if (finalChapters.length < 2) {
+          console.warn("[PDF Analysis] Semantic Font Analysis found too few chapters. Falling back to Text Heuristic.");
+          const fallbackResult = detectChapters(fullRawTextForFallback);
+          finalChapters = fallbackResult.chapters;
+      } else {
+           // Calculate Word Counts for Font-based chapters
+           for (let i = 0; i < finalChapters.length; i++) {
+              const current = finalChapters[i];
+              const next = finalChapters[i + 1];
               if (next) {
                   current.wordCount = next.startIndex - current.startIndex;
               } else {
-                  current.wordCount = totalWordCount - current.startIndex;
+                  current.wordCount = currentWordTotal - current.startIndex;
               }
           }
-          
           // Ensure first chapter starts at 0 or add Intro
-          if (chapters.length > 0 && chapters[0].startIndex > 0) {
-              chapters.unshift({
-                  title: 'Introduction',
-                  startIndex: 0,
-                  wordCount: chapters[0].startIndex
-              });
-          }
-           
-      } 
-      
-      // 3. Visual TOC Strategy (Page Map)
-      // If Native Outline failed, try to find a visual "Table of Contents" and map Page Numbers
-      if (chapters.length === 0) {
-          console.log("No Native Outline, attempting Visual TOC scan...");
-          
-          // Scan first 10 pages for "Contents" header
-          const maxPagesToScan = Math.min(10, pageTextData.length);
-          let tocPageIndex = -1;
-          
-          for (let i = 0; i < maxPagesToScan; i++) {
-              if (/(?:^|\n)\s*(?:Table of Contents|Contents|Index|Sommaire|Inhalt)\s*(?:\n|$)/i.test(pageTextData[i].text)) {
-                  tocPageIndex = i;
-                  break;
-              }
-          }
-
-          if (tocPageIndex !== -1) {
-              console.log("Found Visual TOC on page", tocPageIndex + 1);
-              // Use the rawText (newline preserved) for TOC scanning
-              const tocPageText = pageTextData[tocPageIndex].rawText; 
-              const tocLines = tocPageText.split('\n');
-
-              for (const line of tocLines) {
-                 // Aggressive Regex to capture:
-                 // 1. "Chapter 1 ...... 5"
-                 // 2. "I ......... 5" (Short Roman)
-                 // 3. "1 ......... 5" (Short Numeric)
-                 // 4. "Part I ..... 10"
-                 // 5. "1. Introduction ... 5"
-                 
-                 // Analysis:
-                 // Group 1: Title (The part before the dots/space/number)
-                 // Group 2: The Number at the end
-                 
-                 // We relax the {3,} limit to allow short chapters like "I", "II", "1".
-                 // BUT we must be careful. "The ... 5" is bad. "1 ... 5" is good.
-                 
-                 // This regex allows:
-                 // - Starts with alphanumeric
-                 // - Can be short (1 char) IF it matches Roman/Numeric patterns
-                 // - Or longer (3+ chars) for standard titles
-                 
-                 // Aggressive Regex Updated to support "p." / "pg." / "page" prefix
-                 const match = line.match(/^((?:[A-Z0-9]+)|(?:.{2,}))(?:\s|\.|p\.|pg\.|page\s?)+(\d+)$/i);
-                 
-                 if (match) {
-                     const rawTitle = match[1].replace(/[.]{3,}/g, '').trim();
-                     const pageNum = parseInt(match[2]);
-                     
-                     // Filter Check: Title shouldn't be too weird
-                     // If it's very short (<3 chars), strict check: must be Number or Roman
-                     const isShort = rawTitle.length < 3;
-                     const isNumeric = /^\d+$/.test(rawTitle);
-                     const isRoman = /^[IVXLCDM]+$/i.test(rawTitle);
-                     
-                     if (isShort && !isNumeric && !isRoman) {
-                         continue; // Skip "The" or "Of" etc
-                     }
-
-                     if (!isNaN(pageNum) && pageNum > 0 && pageNum <= pageTextData.length) {
-                         // Map Page Number to Word Index
-                         const targetPageIndex = pageNum - 1;
-                         
-                         // Validation: Chapter shouldn't start BEFORE the TOC
-                         if (targetPageIndex <= tocPageIndex) continue;
-
-                         // Calculate cumulative word count up to this page
-                         let startIndex = 0;
-                         for (let p = 0; p < targetPageIndex; p++) {
-                             startIndex += pageTextData[p].wordCount;
-                         }
-
-                         // Avoid duplicates (if same page, maybe keep first or longest title?)
-                         // We'll filter later
-                         
-                         chapters.push({
-                             title: rawTitle,
-                             startIndex: startIndex,
-                             wordCount: 0 // Will calc later
-                         });
-                     }
-                 }
-              }
-              
-              // Sort and clean
-              chapters.sort((a, b) => a.startIndex - b.startIndex);
-              // Filter duplicates: keep the one with the longer title if start index is same?
-              // Or just uniq
-              chapters = chapters.filter((c, index, self) => 
-                index === 0 || c.startIndex > self[index - 1].startIndex
-              );
-              
-              // Post-calc word counts
-              if (chapters.length > 0) {
-                   for (let i = 0; i < chapters.length; i++) {
-                      const current = chapters[i];
-                      const next = chapters[i + 1];
-                      if (next) {
-                          current.wordCount = next.startIndex - current.startIndex;
-                      } else {
-                          current.wordCount = totalWordCount - current.startIndex;
-                      }
-                  }
-                  
-                  // Ensure start
-                  if (chapters.length > 0 && chapters[0].startIndex > 0) {
-                        chapters.unshift({
-                            title: 'Front Matter',
-                            startIndex: 0,
-                            wordCount: chapters[0].startIndex
-                        });
-                  }
-              }
+          if (finalChapters.length > 0 && finalChapters[0].startIndex > 50) {
+               finalChapters.unshift({
+                   title: 'Start',
+                   startIndex: 0,
+                   wordCount: finalChapters[0].startIndex
+               });
+          } else if (finalChapters.length > 0 && finalChapters[0].startIndex > 0) {
+              // Just snap to 0 if close
+              finalChapters[0].startIndex = 0;
+              finalChapters[0].wordCount += finalChapters[0].startIndex; 
           }
       }
-
-      // 4. Fallback if no outline or visual TOC found
-      if (chapters.length === 0) {
-          console.log("No PDF Outline or Visual TOC, using text heuristic detection");
-          const heuristicResult = detectChapters(fullRawTextForFallback);
-          chapters = heuristicResult.chapters;
-      }
-
-      // 5. Construct Final Data
-      const allWords = pageTextData.flatMap(p => processedToWords(p.text));
       
+      console.log(`[PDF Analysis] Final Chapters: ${finalChapters.length}`);
+
+      const allWords = allPageItems.flatMap(p => processedToWords(p.text));
+
       resolve({
           words: allWords,
-          chapters: chapters,
+          chapters: finalChapters,
           rawText: fullRawTextForFallback
       });
 
