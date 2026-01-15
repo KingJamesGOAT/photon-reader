@@ -13,7 +13,7 @@ import { Moon, Sun, Menu, Palette, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export default function Home() {
-  const { theme, toggleTheme, restoreSession, goHome, colorTheme, setColorTheme, isFullScreen } = useStore();
+  const { theme, toggleTheme, restoreSession, goHome, colorTheme, setColorTheme, isFullScreen, currentFileId } = useStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
 
@@ -146,10 +146,12 @@ export default function Home() {
             <HybridView />
         </div>
 
-        {/* Minimal Dropzone */}
-        <div className="w-full max-w-xl">
-             <Dropzone />
-        </div>
+        {/* Minimal Dropzone - Only visible on Home (demo) */}
+        {currentFileId === 'demo' && (
+            <div className="w-full max-w-xl">
+                <Dropzone />
+            </div>
+        )}
 
       </div>
       
