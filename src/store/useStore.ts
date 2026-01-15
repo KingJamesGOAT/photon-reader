@@ -121,6 +121,7 @@ export const useStore = create<AppState>()(
             wordCount: words.length,
             snippet: words.slice(0, 20).join(' '),
             fullText,
+            chapters, // CRITICAL: Store the detected chapters!
             progress: 0,
             folderId // Store the folder association
         };
@@ -157,7 +158,10 @@ export const useStore = create<AppState>()(
       
       loadRecentFile: (file) => {
           if (file.fullText) {
-              const { words, chapters } = detectChapters(file.fullText);
+              // 1. Prioritize stored chapters if they exist (Robust PDF ones)
+              // 2. Fallback to detection only if missing
+              const { words } = detectChapters(file.fullText);
+              const chapters = file.chapters || detectChapters(file.fullText).chapters;
               
               set({ 
                   content: words, 
