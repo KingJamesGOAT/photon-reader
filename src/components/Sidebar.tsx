@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, RecentFile } from '@/store/useStore';
-import { X, FileText, Trash2, Folder as FolderIcon, FolderOpen, ChevronRight, ChevronDown, Plus, BookOpen, Search } from 'lucide-react';
+import { X, FileText, Trash2, Folder as FolderIcon, FolderOpen, ChevronRight, ChevronDown, Plus, Search } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface SidebarProps {
@@ -111,7 +111,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         )}>
             <div className="p-4 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
                 <h2 className="font-semibold text-lg dark:text-white flex items-center gap-2">
-                    <BookOpen size={20} className="text-brand-500" />
+                    <img src="/favicon.png" alt="PhotonReader" className="w-5 h-5 rounded-full" />
                     Library
                 </h2>
                 <button 

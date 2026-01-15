@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   authors: [{ name: "PhotonReader Team" }],
   openGraph: {
       title: "PhotonReader | Speed Read Faster",
-      description: "Read documents at lightning speed with our privacy-first RSVP reader.",
+      description: "Read documents at lightning speed",
       type: "website",
       locale: "en_US",
       siteName: "PhotonReader",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   twitter: {
       card: "summary_large_image",
       title: "PhotonReader",
-      description: "Speed read your documents securely in the browser.",
+      description: "Read documents at lightning speed",
       images: ["/og-image.png"],
   },
   icons: {
