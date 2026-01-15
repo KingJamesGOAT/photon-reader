@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, RecentFile } from '@/store/useStore';
-import { X, FileText, Trash2, Folder as FolderIcon, FolderOpen, ChevronRight, ChevronDown, Plus, BookOpen } from 'lucide-react';
+import { X, FileText, Trash2, Folder as FolderIcon, FolderOpen, ChevronRight, ChevronDown, Plus, BookOpen, Search } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface SidebarProps {
@@ -81,6 +81,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+    const [searchQuery, setSearchQuery] = useState('');
 
     const toggleFolder = (folderId: string) => {
         setExpandedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }));
@@ -97,6 +98,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const rootFiles = recentFiles.filter(f => !f.folderId);
     
     const getFolderFiles = (folderId: string) => recentFiles.filter(f => f.folderId === folderId);
+
+    // Search Logic
+    const filteredFiles = searchQuery 
+        ? recentFiles.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        : [];
 
     return (
         <div className={clsx(
@@ -116,101 +122,38 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 </button>
             </div>
 
+            {/* Search Bar */}
+            <div className="px-4 pt-4 pb-2">
+                <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                    <input 
+                        type="text"
+                        placeholder="Search PDF..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm bg-neutral-100 dark:bg-neutral-900 border-none rounded-xl focus:ring-2 focus:ring-red-500/50 outline-none transition-all"
+                    />
+                    {searchQuery && (
+                         <button 
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
+            </div>
+
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
                 
-                {/* Folders Section */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between px-1">
-                        <h3 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                            Folders
+                {searchQuery ? (
+                    /* Search Results */
+                    <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2">
+                         <h3 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider px-1 mb-2">
+                            Search Results ({filteredFiles.length})
                         </h3>
-                        <button 
-                            onClick={() => setIsCreatingFolder(!isCreatingFolder)}
-                            className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded text-neutral-500 hover:text-red-500 transition-colors"
-                        >
-                            <Plus size={16} />
-                        </button>
-                    </div>
-
-                    {isCreatingFolder && (
-                        <div className="flex gap-2 mb-2 animate-in slide-in-from-top-2">
-                             <input 
-                                type="text" 
-                                value={newFolderName}
-                                onChange={(e) => setNewFolderName(e.target.value)}
-                                placeholder="Name..."
-                                className="flex-1 px-2 py-1 text-sm bg-neutral-100 dark:bg-neutral-800 rounded border-none focus:ring-1 focus:ring-red-500 outline-none"
-                                autoFocus
-                                onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
-                            />
-                            <button 
-                                onClick={handleCreateFolder}
-                                disabled={!newFolderName}
-                                className="p-1.5 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-                            >
-                                <Plus size={14} />
-                            </button>
-                        </div>
-                    )}
-
-                    <div className="space-y-1">
-                        {folders.map(folder => (
-                            <div key={folder.id} className="space-y-1 mt-2">
-                                <div className="group flex items-center gap-1 p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer select-none text-sm text-neutral-700 dark:text-neutral-200 transition-colors">
-                                    <button 
-                                        onClick={() => toggleFolder(folder.id)}
-                                        className="p-0.5 hover:text-red-500"
-                                    >
-                                        {expandedFolders[folder.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                    </button>
-                                    
-                                    <div 
-                                        className="flex-1 flex items-center gap-2"
-                                        onClick={() => toggleFolder(folder.id)}
-                                    >
-                                        {expandedFolders[folder.id] ? <FolderOpen size={16} className="text-red-500" /> : <FolderIcon size={16} className="text-neutral-400" />}
-                                        <span className="font-medium">{folder.name}</span>
-                                        <span className="ml-auto text-xs text-neutral-400">{getFolderFiles(folder.id).length}</span>
-                                    </div>
-
-                                    <button 
-                                        onClick={() => deleteFolder(folder.id)}
-                                        className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-red-500 transition-opacity"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-
-                                {expandedFolders[folder.id] && (
-                                    <div className="pl-4 space-y-1 border-l border-neutral-200 dark:border-neutral-800 ml-4">
-                                        {getFolderFiles(folder.id).map(file => (
-                                            <FileItem 
-                                                key={file.id} 
-                                                file={file} 
-                                                currentFileId={currentFileId}
-                                                loadRecentFile={loadRecentFile}
-                                                onClose={onClose}
-                                                deleteFile={deleteFile}
-                                            />
-                                        ))}
-                                        {getFolderFiles(folder.id).length === 0 && (
-                                            <p className="px-3 py-2 text-xs text-neutral-400 italic">Empty folder</p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Root Files Section */}
-                <div className="space-y-3">
-                    <h3 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider px-1">
-                        Unsorted
-                    </h3>
-                    <div className="space-y-2">
-                        {rootFiles.map(file => (
-                            <FileItem 
+                        {filteredFiles.map(file => (
+                             <FileItem 
                                 key={file.id} 
                                 file={file} 
                                 currentFileId={currentFileId}
@@ -219,11 +162,123 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                 deleteFile={deleteFile}
                             />
                         ))}
-                        {rootFiles.length === 0 && (
-                            <p className="text-sm text-neutral-400 text-center py-4">No sorting files</p>
+                         {filteredFiles.length === 0 && (
+                            <p className="text-sm text-neutral-400 text-center py-8 flex flex-col items-center gap-2">
+                                <Search size={24} className="opacity-20" />
+                                No matching files found
+                            </p>
                         )}
                     </div>
-                </div>
+                ) : (
+                    <>
+                        {/* Folders Section */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between px-1">
+                                <h3 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                                    Folders
+                                </h3>
+                                <button 
+                                    onClick={() => setIsCreatingFolder(!isCreatingFolder)}
+                                    className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded text-neutral-500 hover:text-red-500 transition-colors"
+                                >
+                                    <Plus size={16} />
+                                </button>
+                            </div>
+
+                            {isCreatingFolder && (
+                                <div className="flex gap-2 mb-2 animate-in slide-in-from-top-2">
+                                    <input 
+                                        type="text" 
+                                        value={newFolderName}
+                                        onChange={(e) => setNewFolderName(e.target.value)}
+                                        placeholder="Name..."
+                                        className="flex-1 px-2 py-1 text-sm bg-neutral-100 dark:bg-neutral-800 rounded border-none focus:ring-1 focus:ring-red-500 outline-none"
+                                        autoFocus
+                                        onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                                    />
+                                    <button 
+                                        onClick={handleCreateFolder}
+                                        disabled={!newFolderName}
+                                        className="p-1.5 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                                    >
+                                        <Plus size={14} />
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="space-y-1">
+                                {folders.map(folder => (
+                                    <div key={folder.id} className="space-y-1 mt-2">
+                                        <div className="group flex items-center gap-1 p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer select-none text-sm text-neutral-700 dark:text-neutral-200 transition-colors">
+                                            <button 
+                                                onClick={() => toggleFolder(folder.id)}
+                                                className="p-0.5 hover:text-red-500"
+                                            >
+                                                {expandedFolders[folder.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                            </button>
+                                            
+                                            <div 
+                                                className="flex-1 flex items-center gap-2"
+                                                onClick={() => toggleFolder(folder.id)}
+                                            >
+                                                {expandedFolders[folder.id] ? <FolderOpen size={16} className="text-red-500" /> : <FolderIcon size={16} className="text-neutral-400" />}
+                                                <span className="font-medium">{folder.name}</span>
+                                                <span className="ml-auto text-xs text-neutral-400">{getFolderFiles(folder.id).length}</span>
+                                            </div>
+
+                                            <button 
+                                                onClick={() => deleteFolder(folder.id)}
+                                                className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-red-500 transition-opacity"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+
+                                        {expandedFolders[folder.id] && (
+                                            <div className="pl-4 space-y-1 border-l border-neutral-200 dark:border-neutral-800 ml-4">
+                                                {getFolderFiles(folder.id).map(file => (
+                                                    <FileItem 
+                                                        key={file.id} 
+                                                        file={file} 
+                                                        currentFileId={currentFileId}
+                                                        loadRecentFile={loadRecentFile}
+                                                        onClose={onClose}
+                                                        deleteFile={deleteFile}
+                                                    />
+                                                ))}
+                                                {getFolderFiles(folder.id).length === 0 && (
+                                                    <p className="px-3 py-2 text-xs text-neutral-400 italic">Empty folder</p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Root Files Section */}
+                        <div className="space-y-3">
+                            <h3 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider px-1">
+                                Unsorted
+                            </h3>
+                            <div className="space-y-2">
+                                {rootFiles.map(file => (
+                                    <FileItem 
+                                        key={file.id} 
+                                        file={file} 
+                                        currentFileId={currentFileId}
+                                        loadRecentFile={loadRecentFile}
+                                        onClose={onClose}
+                                        deleteFile={deleteFile}
+                                    />
+                                ))}
+                                {rootFiles.length === 0 && (
+                                    <p className="text-sm text-neutral-400 text-center py-4">No sorting files</p>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
 
             </div>
         </div>

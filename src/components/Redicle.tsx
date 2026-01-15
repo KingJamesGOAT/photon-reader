@@ -30,7 +30,7 @@ export const Redicle = () => {
 
             {/* Word Display */}
             {/* Uses text-foreground for automatic Black/White switching */}
-            <div className="flex items-baseline text-4xl sm:text-6xl md:text-7xl font-sans tracking-tight relative z-20 select-none max-w-full px-4 leading-none">
+            <div className="flex items-baseline text-5xl sm:text-7xl md:text-8xl font-sans tracking-tight relative z-20 select-none max-w-full px-4 leading-none">
                 <span className="text-foreground text-right w-[6ch] sm:w-[10ch] overflow-visible whitespace-nowrap">
                     {leftPart}
                 </span>
