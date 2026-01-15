@@ -128,6 +128,36 @@ export const detectChapters = (fullText: string): { words: string[], chapters: C
 // Extractors
 // ---------------------------
 
+// Helper to reconstruct page text visually based on coordinates
+// This is critical for reading parsed TOC pages correctly, as standard text extraction
+// often flattens vertical columns or messes up newline detection.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const extractPageTextVisually = (items: any[]): string => {
+    // 1. Group items by Y-coordinate (Lines)
+    const lines: { y: number, items: any[] }[] = [];
+    const yTolerance = 5; // Pixels tolerance for same line
+
+    items.forEach(item => {
+        const y = item.transform[5]; // Transform[5] is the Y position
+        // Find an existing line that matches this Y
+        const line = lines.find(l => Math.abs(l.y - y) < yTolerance);
+        if (line) {
+            line.items.push(item);
+        } else {
+            lines.push({ y, items: [item] });
+        }
+    });
+
+    // 2. Sort Lines Top-to-Bottom (PDF Y usually goes up, so Descending Y is Top-to-Bottom)
+    lines.sort((a, b) => b.y - a.y);
+
+    // 3. Sort Items Left-to-Right and Join
+    return lines.map(line => {
+        line.items.sort((a, b) => a.transform[4] - b.transform[4]); // Sort by X
+        return line.items.map(item => item.str).join(' ');
+    }).join('\n');
+};
+
 export const extractTextFromTXT = async (file: File): Promise<ProcessedText> => {
     const text = await file.text();
     const cleaned = cleanText(text);
@@ -167,11 +197,8 @@ export const extractTextFromPDF = async (file: File): Promise<ProcessedText> => 
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         
-        // 1. Create a version specifically for TOC detection (preserves newlines)
-        const pageTocText = textContent.items
-          // @ts-expect-error item type mismatch
-          .map((item) => item.str)
-          .join('\n'); // JOIN WITH NEWLINE
+        // 1. Create a version specifically for TOC detection (preserves newlines via visual coordinates)
+        const pageTocText = extractPageTextVisually(textContent.items);
 
         // 2. Create the standard reading version (preserves flow)
         const pageRawText = textContent.items
