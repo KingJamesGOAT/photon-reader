@@ -58,6 +58,7 @@ interface AppState {
   reset: () => void;
   loadRecentFile: (file: RecentFile) => void;
   updateRecentFileProgress: (id: string, index: number) => void;
+  moveFile: (fileId: string, folderId?: string) => void;
   goHome: () => void;
   restoreSession: () => void;
 }
@@ -177,6 +178,12 @@ export const useStore = create<AppState>()(
         recentFiles: state.recentFiles.map(f => 
             f.id === id ? { ...f, progress: index, timestamp: Date.now() } : f
         )
+      })),
+
+      moveFile: (fileId, folderId) => set((state) => ({
+          recentFiles: state.recentFiles.map(f => 
+              f.id === fileId ? { ...f, folderId } : f
+          )
       })),
 
       goHome: () => set({
