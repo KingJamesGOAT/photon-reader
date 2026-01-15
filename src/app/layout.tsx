@@ -33,25 +33,22 @@ export const metadata: Metadata = {
   authors: [{ name: "PhotonReader Team" }],
   openGraph: {
       title: "PhotonReader | Speed Read Faster",
-      description: "Read documents at lightning speed",
+      description: "Read documents at lightning speed with our privacy-first RSVP reader.",
       type: "website",
       locale: "en_US",
       siteName: "PhotonReader",
-      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "PhotonReader Preview" }]
+      images: [{ url: "/opengraph-image.jpg", width: 1200, height: 630, alt: "PhotonReader Preview" }]
   },
   twitter: {
       card: "summary_large_image",
       title: "PhotonReader",
-      description: "Read documents at lightning speed",
-      images: ["/og-image.png"],
+      description: "Speed read your documents securely in the browser.",
+      images: ["/opengraph-image.jpg"],
   },
   icons: {
-    icon: [
-      { url: "/favicon.png", type: "image/png" },
-      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
-    ],
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
   },
 };
 

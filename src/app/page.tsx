@@ -57,7 +57,6 @@ export default function Home() {
             </button>
 
             <button onClick={goHome} className="flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
-                <img src="/favicon.png" alt="PhotonReader" className="w-6 h-6 rounded-full" />
                 <span className="font-bold tracking-tight text-xl">PhotonReader</span>
             </button>
         </div>
