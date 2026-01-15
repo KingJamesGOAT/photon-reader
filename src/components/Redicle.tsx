@@ -18,7 +18,7 @@ export const Redicle = () => {
         {/* Spritz-style Guide Container */}
         {/* Uses border-foreground to automatically switch Black/White based on theme */}
         <div className={clsx(
-            "relative w-full h-[140px] flex items-center justify-center",
+            "relative w-full h-[220px] flex items-center justify-center py-8",
             "border-y-2 border-foreground transition-colors duration-300"
         )}>
             

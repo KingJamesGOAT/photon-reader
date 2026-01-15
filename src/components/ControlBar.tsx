@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useStore } from "@/store/useStore";
 import { useRSVP } from "@/hooks/useRSVP";
-import { Play, Pause, RotateCcw, RotateCw } from "lucide-react";
+import { Play, Pause, RotateCcw, RotateCw, Maximize } from "lucide-react";
 
 export const ControlBar = () => {
-  const { isPlaying, setIsPlaying, wpm, setWpm, currentFileId, reset } = useStore();
+  const { isPlaying, setIsPlaying, wpm, setWpm, currentFileId, reset, setIsFullScreen, isFullScreen } = useStore();
   const { progress } = useRSVP();
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -94,6 +94,14 @@ export const ControlBar = () => {
                 <RotateCw size={18} />
             </button>
           )}
+
+          <button
+            onClick={() => setIsFullScreen(!isFullScreen)}
+            className="p-2 sm:p-3 text-muted-foreground hover:text-foreground dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all"
+            title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+          >
+            <Maximize size={18} />
+          </button>
         </div>
 
         <div className="flex items-center gap-4 sm:gap-6 flex-1 justify-center sm:justify-end w-full sm:w-auto order-1 sm:order-2">

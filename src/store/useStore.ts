@@ -40,8 +40,10 @@ interface AppState {
   recentFiles: RecentFile[];
   folders: Folder[];
   chapters: Chapter[];
+  isFullScreen: boolean;
   
   // Actions
+  setIsFullScreen: (isFull: boolean) => void;
   createFolder: (name: string) => void;
   deleteFolder: (id: string) => void;
   deleteFile: (id: string) => void;
@@ -69,7 +71,9 @@ export const useStore = create<AppState>()(
       recentFiles: [],
       folders: [],
       chapters: [],
+      isFullScreen: false,
       
+      setIsFullScreen: (isFullScreen) => set({ isFullScreen }),
       createFolder: (name) => set((state) => ({
           folders: [...state.folders, { id: Date.now().toString(), name, createdAt: Date.now() }]
       })),

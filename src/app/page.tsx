@@ -7,6 +7,7 @@ import { ControlBar } from '@/components/ControlBar';
 import { Dropzone } from '@/components/Dropzone';
 import { Sidebar } from '@/components/Sidebar';
 import { TableOfContents } from '@/components/TableOfContents';
+import { FullScreenOverlay } from '@/components/FullScreenOverlay';
 import { Moon, Sun, Menu } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -37,6 +38,7 @@ export default function Home() {
       
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <TableOfContents />
+      <FullScreenOverlay />
 
       {/* Floating Header */}
       <nav className="fixed top-0 inset-x-0 z-30 h-16 md:h-20 flex items-center justify-between px-6 md:px-8 bg-transparent">
