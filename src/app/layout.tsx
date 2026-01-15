@@ -24,6 +24,7 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://photon-reader.vercel.app'),
   title: {
     default: "PhotonReader | Speed Read Faster",
     template: "%s | PhotonReader"
@@ -37,7 +38,15 @@ export const metadata: Metadata = {
       type: "website",
       locale: "en_US",
       siteName: "PhotonReader",
-      images: [{ url: "/opengraph-image.jpg", width: 1200, height: 630, alt: "PhotonReader Preview" }]
+      images: [
+        { 
+          url: "/opengraph-image.jpg", 
+          width: 1200, 
+          height: 1200, 
+          alt: "PhotonReader Preview",
+          type: "image/jpeg"
+        }
+      ]
   },
   twitter: {
       card: "summary_large_image",
@@ -46,8 +55,11 @@ export const metadata: Metadata = {
       images: ["/opengraph-image.jpg"],
   },
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico", type: "image/x-icon" }
+    ],
+    shortcut: "/favicon.ico",
     apple: "/icon.png",
   },
 };
