@@ -62,6 +62,7 @@ interface AppState {
   goHome: () => void;
   restoreSession: () => void;
   togglePlaySmart: () => void;
+  seekByTime: (seconds: number) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -204,6 +205,22 @@ export const useStore = create<AppState>()(
               // Rewind 10 words (smart forgiveness) and play
               const newIndex = Math.max(0, currentIndex - 10);
               set({ currentIndex: newIndex, isPlaying: true });
+          }
+      },
+
+      seekByTime: (seconds) => {
+          const { wpm, currentIndex, content } = get();
+          const wordsToSeek = Math.ceil((wpm / 60) * Math.abs(seconds));
+          const newIndex = seconds < 0 
+            ? Math.max(0, currentIndex - wordsToSeek)
+            : Math.min(content.length - 1, currentIndex + wordsToSeek);
+          
+          set({ currentIndex: newIndex });
+          
+          // Auto-update recent file progress
+          const { currentFileId } = get();
+          if (currentFileId) {
+             get().updateRecentFileProgress(currentFileId, newIndex);
           }
       },
 

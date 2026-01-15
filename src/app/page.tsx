@@ -8,6 +8,7 @@ import { Dropzone } from '@/components/Dropzone';
 import { Sidebar } from '@/components/Sidebar';
 import { TableOfContents } from '@/components/TableOfContents';
 import { FullScreenOverlay } from '@/components/FullScreenOverlay';
+import { ShortcutsOverlay } from '@/components/ShortcutsOverlay';
 import { HybridView } from '@/components/HybridView';
 import { Moon, Sun, Menu, Palette, Check } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -35,6 +36,15 @@ export default function Home() {
         } else if (e.code === 'ArrowDown') {
             e.preventDefault();
             useStore.getState().setWpm(Math.max(100, useStore.getState().wpm - 25));
+        } else if (e.code === 'ArrowLeft') {
+            e.preventDefault();
+            useStore.getState().seekByTime(-10); // Back 10s
+        } else if (e.code === 'ArrowRight') {
+            e.preventDefault();
+            useStore.getState().seekByTime(10); // Forward 10s
+        } else if (e.key === 'f' || e.key === 'F') {
+           e.preventDefault();
+           useStore.getState().setIsFullScreen(!useStore.getState().isFullScreen);
         }
     };
 
@@ -62,6 +72,7 @@ export default function Home() {
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <TableOfContents />
       <FullScreenOverlay />
+      <ShortcutsOverlay />
 
       {/* Floating Header */}
       {!isFullScreen && (
