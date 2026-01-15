@@ -66,8 +66,8 @@ export const TableOfContents = () => {
                                     isActive 
                                         ? "bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100" 
                                         : isPast
-                                            ? "text-neutral-400 dark:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                                            : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                            ? "text-neutral-500 dark:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                            : "text-foreground dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                 )}
                             >
                                 <div className="flex justify-between items-start">
