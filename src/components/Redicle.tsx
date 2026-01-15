@@ -53,7 +53,7 @@ export const Redicle = () => {
             </div>
 
             {/* WPM Indicator */}
-            <div className="absolute bottom-2 right-4 text-xs font-mono text-muted-foreground opacity-50">
+            <div className="absolute -bottom-6 right-0 text-xs font-mono text-muted-foreground opacity-60">
                {useRSVP().wpm} wpm
             </div>
         </div>
