@@ -41,10 +41,16 @@ const processedToWords = (cleanedText: string): string[] => {
     return cleanedText.split(/\s+/).filter(w => w.length > 0);
 };
 
-export const detectChapters = (fullText: string): Chapter[] => {
+export const detectChapters = (fullText: string): { words: string[], chapters: Chapter[] } => {
     // Fallback Heuristic Strategy (Used if PDF has no Outline)
     // Same logic as before but refined.
     
+    // We need to re-tokenize here to ensure word counts are accurate to the inputs
+    // However, if we are passing "clean" text, it's fine.
+    // Ideally we return the words list this function generated/used.
+    
+    const words = processedToWords(fullText);
+
     const chapters: { title: string, index: number }[] = [];
     
     // 1. Explicit Headers
@@ -65,7 +71,7 @@ export const detectChapters = (fullText: string): Chapter[] => {
 
     // Default
     if (chapters.length === 0) {
-        return [{ title: 'Full Text', startIndex: 0, wordCount: 0 }];
+        return { words, chapters: [{ title: 'Full Text', startIndex: 0, wordCount: 0 }] };
     }
 
     chapters.sort((a, b) => a.index - b.index);
@@ -106,7 +112,7 @@ export const detectChapters = (fullText: string): Chapter[] => {
         }
     });
 
-    return finalChapters;
+    return { words, chapters: finalChapters };
 };
 
 // ---------------------------
@@ -117,7 +123,7 @@ export const extractTextFromTXT = async (file: File): Promise<ProcessedText> => 
     const text = await file.text();
     const cleaned = cleanText(text);
     const words = processedToWords(cleaned);
-    const chapters = detectChapters(text); // Use raw text for detection structure
+    const { chapters } = detectChapters(text); // Use raw text for detection structure
     
     // Fix up chapter word counts/indices based on cleaned words
     // For TXT, accurate mapping is hard without keeping offsets. 
@@ -251,7 +257,8 @@ export const extractTextFromPDF = async (file: File): Promise<ProcessedText> => 
       // 3. Fallback if no outline or empty
       if (chapters.length === 0) {
           console.log("No PDF Outline, using heuristic detection");
-          chapters = detectChapters(fullRawTextForFallback);
+          const heuristicResult = detectChapters(fullRawTextForFallback);
+          chapters = heuristicResult.chapters;
       }
 
       // 4. Construct Final Data
