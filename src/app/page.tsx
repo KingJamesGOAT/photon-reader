@@ -8,6 +8,7 @@ import { Dropzone } from '@/components/Dropzone';
 import { Sidebar } from '@/components/Sidebar';
 import { TableOfContents } from '@/components/TableOfContents';
 import { FullScreenOverlay } from '@/components/FullScreenOverlay';
+import { HybridView } from '@/components/HybridView';
 import { Moon, Sun, Menu, Palette, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -27,7 +28,7 @@ export default function Home() {
 
         if (e.code === 'Space') {
             e.preventDefault();
-            useStore.getState().setIsPlaying(!useStore.getState().isPlaying);
+            useStore.getState().togglePlaySmart();
         } else if (e.code === 'ArrowUp') {
             e.preventDefault();
             useStore.getState().setWpm(Math.min(1000, useStore.getState().wpm + 25));
@@ -142,6 +143,7 @@ export default function Home() {
         <div className="w-full flex flex-col items-center gap-8 transform scale-105 md:scale-110 transition-transform">
             <Redicle />
             <ControlBar />
+            <HybridView />
         </div>
 
         {/* Minimal Dropzone */}

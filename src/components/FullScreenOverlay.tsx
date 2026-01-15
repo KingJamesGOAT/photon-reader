@@ -6,7 +6,7 @@ import { Play, Pause, RotateCcw, RotateCw, Minimize2 } from 'lucide-react';
 
 
 export const FullScreenOverlay = () => {
-    const { isFullScreen, setIsFullScreen, isPlaying, setIsPlaying, wpm, currentFileId } = useStore();
+    const { isFullScreen, setIsFullScreen, isPlaying, wpm, currentFileId } = useStore();
     const { progress } = useRSVP();
 
     if (!isFullScreen) return null;
@@ -64,7 +64,7 @@ export const FullScreenOverlay = () => {
                     </button>
 
                     <button
-                        onClick={() => setIsPlaying(!isPlaying)}
+                        onClick={() => useStore.getState().togglePlaySmart()}
                         className="p-8 bg-foreground text-background rounded-full hover:scale-105 active:scale-95 transition-all shadow-2xl"
                     >
                         {isPlaying ? (

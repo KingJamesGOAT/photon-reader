@@ -4,7 +4,7 @@ import { useRSVP } from "@/hooks/useRSVP";
 import { Play, Pause, RotateCcw, RotateCw, Maximize } from "lucide-react";
 
 export const ControlBar = () => {
-  const { isPlaying, setIsPlaying, wpm, setWpm, currentFileId, reset, setIsFullScreen, isFullScreen } = useStore();
+  const { isPlaying, wpm, setWpm, currentFileId, reset, setIsFullScreen, isFullScreen } = useStore();
   const { progress } = useRSVP();
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -65,7 +65,7 @@ export const ControlBar = () => {
           )}
 
           <button
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={() => useStore.getState().togglePlaySmart()}
             className="group relative flex items-center justify-center p-3 sm:p-4 bg-foreground text-background rounded-full hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             {isPlaying ? (

@@ -61,6 +61,7 @@ interface AppState {
   moveFile: (fileId: string, folderId?: string) => void;
   goHome: () => void;
   restoreSession: () => void;
+  togglePlaySmart: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -193,6 +194,18 @@ export const useStore = create<AppState>()(
           currentIndex: 0,
           isPlaying: false
       }),
+
+      togglePlaySmart: () => {
+          const { isPlaying, currentIndex } = get();
+          if (isPlaying) {
+              // Just pause
+              set({ isPlaying: false });
+          } else {
+              // Rewind 10 words (smart forgiveness) and play
+              const newIndex = Math.max(0, currentIndex - 10);
+              set({ currentIndex: newIndex, isPlaying: true });
+          }
+      },
 
       restoreSession: () => {
           const { currentFileId, recentFiles } = get();

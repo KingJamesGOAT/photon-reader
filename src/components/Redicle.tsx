@@ -2,8 +2,11 @@ import React from 'react';
 import { useRSVP } from '@/hooks/useRSVP';
 import { clsx } from 'clsx';
 
+import { useStore } from '@/store/useStore';
+
 export const Redicle = () => {
   const { currentWord } = useRSVP();
+  const { content, currentIndex } = useStore();
 
   // Optimal Recognition Point (ORP)
   const orpIndex = Math.floor((currentWord.length - 1) / 2);
@@ -11,6 +14,34 @@ export const Redicle = () => {
   const leftPart = currentWord.slice(0, orpIndex);
   const pivotChar = currentWord[orpIndex];
   const rightPart = currentWord.slice(orpIndex + 1);
+
+  // Context Anchors (Ghost Words)
+  const prevWord = currentIndex > 0 ? content[currentIndex - 1] : '';
+  const nextWord = currentIndex < content.length - 1 ? content[currentIndex + 1] : '';
+
+  // Sentence Progress Logic
+  const getSentenceProgress = () => {
+    if (!content.length) return 0;
+    
+    // Find start (look back for punctuation)
+    let start = currentIndex;
+    while (start > 0 && !/[.?!]/.test(content[start - 1])) {
+        start--;
+    }
+
+    // Find end (look forward for punctuation)
+    let end = currentIndex;
+    while (end < content.length - 1 && !/[.?!]/.test(content[end])) {
+        end++;
+    }
+
+    const total = end - start + 1;
+    const current = currentIndex - start + 1;
+    
+    return Math.min(100, Math.max(0, (current / total) * 100));
+  };
+
+  const sentenceProgress = getSentenceProgress();
 
   return (
     <div className="relative flex flex-col items-center justify-center h-64 w-full max-w-3xl mx-auto mb-8">
@@ -27,6 +58,14 @@ export const Redicle = () => {
             
             {/* Bottom Vertical Marker */}
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[2px] h-[40px] md:h-[20px] bg-foreground transition-colors duration-300" />
+
+            {/* Context Anchors (Ghost Words) - HIDDEN ON MOBILE */}
+            <div className="absolute right-[60%] top-1/2 -translate-y-1/2 select-none hidden md:block md:text-4xl lg:text-5xl text-neutral-400 dark:text-neutral-600 blur-[2px] opacity-30 transition-all">
+                {prevWord}
+            </div>
+            <div className="absolute left-[60%] top-1/2 -translate-y-1/2 select-none hidden md:block md:text-4xl lg:text-5xl text-neutral-400 dark:text-neutral-600 blur-[2px] opacity-30 transition-all">
+                {nextWord}
+            </div>
 
             {/* Word Display */}
             <div className="flex text-5xl sm:text-7xl md:text-8xl font-sans tracking-normal relative z-20 select-none w-full px-4 leading-none">
@@ -50,6 +89,14 @@ export const Redicle = () => {
                         {rightPart}
                     </span>
                 </div>
+            </div>
+
+            {/* Sentence Progress Bar (Responsive Sizing) */}
+            <div className="absolute top-2/3 left-1/2 -translate-x-1/2 rounded-full overflow-hidden mt-8 md:mt-12 w-24 md:w-64 h-1 md:h-1.5 bg-neutral-200 dark:bg-neutral-800 opacity-80">
+                <div 
+                    className="h-full bg-brand-500 transition-all duration-300 ease-out"
+                    style={{ width: `${sentenceProgress}%` }}
+                />
             </div>
 
             {/* WPM Indicator */}
