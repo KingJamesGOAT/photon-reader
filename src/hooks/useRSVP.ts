@@ -13,26 +13,41 @@ export const useRSVP = () => {
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const getDelayForWord = (word: string, baseInterval: number) => {
+    let multiplier = 1.0;
+    
+    // Punctuation multipliers
+    if (/[.?!:]/.test(word)) {
+      multiplier = 2.5; // End of sentence / major pause
+    } else if (/[,;—\-]/.test(word)) {
+      multiplier = 1.5; // Clause break
+    }
+    
+    // Long word penalty
+    if (word.length > 10) {
+      multiplier *= 1.2;
+    }
+    
+    return baseInterval * multiplier;
+  };
+
   useEffect(() => {
-    if (isPlaying && content.length > 0) {
-      const intervalMs = 60000 / wpm; // Simple constant speed for now
+    if (isPlaying && content.length > 0 && currentIndex < content.length) {
+      const baseInterval = 60000 / wpm;
+      const currentWord = content[currentIndex] || '';
+      const delay = getDelayForWord(currentWord, baseInterval);
       
-      timerRef.current = setInterval(() => {
+      timerRef.current = setTimeout(() => {
         setCurrentIndex(currentIndex + 1);
-      }, intervalMs);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      }, delay);
     }
 
     return () => {
       if (timerRef.current) {
-        clearInterval(timerRef.current);
+        clearTimeout(timerRef.current);
       }
     };
-  }, [isPlaying, wpm, content.length, currentIndex, setCurrentIndex]);
+  }, [isPlaying, wpm, content, currentIndex, setCurrentIndex]);
 
   // Stop when we reach the end
   // Handle end of content (Loop with Delay)
