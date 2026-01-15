@@ -6,11 +6,12 @@ import { Redicle } from '@/components/Redicle';
 import { ControlBar } from '@/components/ControlBar';
 import { Dropzone } from '@/components/Dropzone';
 import { Sidebar } from '@/components/Sidebar';
-import { Moon, Sun, Menu, Zap } from 'lucide-react';
+import { TableOfContents } from '@/components/TableOfContents';
+import { Moon, Sun, Menu } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export default function Home() {
-  const { theme, toggleTheme } = useStore();
+  const { theme, toggleTheme, restoreSession, goHome } = useStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -21,6 +22,10 @@ export default function Home() {
         document.documentElement.classList.remove('dark');
     }
   }, [theme]);
+
+  useEffect(() => {
+    restoreSession();
+  }, [restoreSession]);
 
   return (
     <main className={clsx(
@@ -40,6 +45,7 @@ export default function Home() {
       )}
       
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <TableOfContents />
 
       {/* Floating Header */}
       <nav className="fixed top-0 inset-x-0 z-30 h-16 flex items-center justify-between px-6 md:px-8 bg-transparent">
@@ -51,9 +57,10 @@ export default function Home() {
             >
                 <Menu size={24} className="dark:text-white" />
             </button>
-            <div className="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
+
+            <button onClick={goHome} className="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
                 <span className="font-bold tracking-tight text-lg">PhotonReader</span>
-            </div>
+            </button>
         </div>
         <button 
             onClick={toggleTheme}

@@ -35,24 +35,35 @@ export const useRSVP = () => {
   }, [isPlaying, wpm, content.length, currentIndex, setCurrentIndex]);
 
   // Stop when we reach the end
-  // Handle end of content (Stop or Loop)
+  // Handle end of content (Loop with Delay)
+  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (currentIndex >= content.length && isPlaying) {
-      const { currentFileId } = useStore.getState();
+      // Pause immediately at the end
+      setIsPlaying(false);
       
-      if (currentFileId === 'demo') {
-           // Auto-Loop for Demo
-           setCurrentIndex(0);
-      } else {
-           // Stop for regular files
-           setIsPlaying(false);
-           setCurrentIndex(content.length - 1); 
-      }
+      // Clear any existing timeout just in case
+      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+
+      // Wait shortly then restart
+      restartTimeoutRef.current = setTimeout(() => {
+          setCurrentIndex(0);
+          setIsPlaying(true);
+      }, 1000); // 1 second pause
     }
   }, [currentIndex, content.length, isPlaying, setIsPlaying, setCurrentIndex]);
 
+  // Cleanup restart timeout on unmount
+  useEffect(() => {
+      return () => {
+          if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+      };
+  }, []);
+
   return {
     currentWord: content[currentIndex] || '',
-    progress: content.length > 0 ? (currentIndex / content.length) * 100 : 0
+    progress: content.length > 0 ? (currentIndex / content.length) * 100 : 0,
+    wpm
   };
 };

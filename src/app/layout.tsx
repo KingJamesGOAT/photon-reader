@@ -26,15 +26,18 @@ export const metadata: Metadata = {
       type: "website",
       locale: "en_US",
       siteName: "PhotonReader",
-      // images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "PhotonReader Preview" }] // Placeholder for future OG image
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "PhotonReader Preview" }]
   },
   twitter: {
       card: "summary_large_image",
       title: "PhotonReader",
       description: "Speed read your documents securely in the browser.",
+      images: ["/og-image.png"],
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
   },
   viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 };
