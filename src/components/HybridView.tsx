@@ -6,23 +6,19 @@ export const HybridView = () => {
     const { content, currentIndex, setCurrentIndex, isFullScreen } = useStore();
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Context Window: Show ~25 words before and after
-    const start = Math.max(0, currentIndex - 25);
-    const end = Math.min(content.length, currentIndex + 35);
+    // Static Paging Logic
+    const WORDS_PER_PAGE = 50;
+    const pageIndex = Math.floor(currentIndex / WORDS_PER_PAGE);
+    const start = pageIndex * WORDS_PER_PAGE;
+    const end = Math.min(content.length, start + WORDS_PER_PAGE);
     const visibleWords = content.slice(start, end);
 
-    // Auto-scroll to keep current word in view
+    // Auto-scroll to top when page changes
     useEffect(() => {
         if (containerRef.current) {
-            const activeElement = containerRef.current.querySelector('[data-active="true"]');
-            if (activeElement) {
-                activeElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                });
-            }
+            containerRef.current.scrollTop = 0;
         }
-    }, [currentIndex]);
+    }, [pageIndex]);
 
     if (isFullScreen) return null;
 
@@ -30,7 +26,7 @@ export const HybridView = () => {
         <div 
             className={clsx(
                 "w-full max-w-2xl mt-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-black/20 backdrop-blur-sm overflow-hidden transition-all duration-500",
-                "h-32 md:h-auto md:max-h-60" // Mobile: Fixed small height. Desktop: Taller max height.
+                "h-32 md:h-auto md:max-h-60" 
             )}
         >
             <div 

@@ -15,10 +15,6 @@ export const Redicle = () => {
   const pivotChar = currentWord[orpIndex];
   const rightPart = currentWord.slice(orpIndex + 1);
 
-  // Context Anchors (Ghost Words)
-  const prevWord = currentIndex > 0 ? content[currentIndex - 1] : '';
-  const nextWord = currentIndex < content.length - 1 ? content[currentIndex + 1] : '';
-
   // Sentence Progress Logic
   const getSentenceProgress = () => {
     if (!content.length) return 0;
@@ -58,14 +54,6 @@ export const Redicle = () => {
             
             {/* Bottom Vertical Marker */}
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[2px] h-[40px] md:h-[20px] bg-foreground transition-colors duration-300" />
-
-            {/* Context Anchors (Ghost Words) - HIDDEN ON MOBILE */}
-            <div className="absolute right-[60%] top-1/2 -translate-y-1/2 select-none hidden md:block md:text-4xl lg:text-5xl text-neutral-400 dark:text-neutral-600 blur-[2px] opacity-30 transition-all">
-                {prevWord}
-            </div>
-            <div className="absolute left-[60%] top-1/2 -translate-y-1/2 select-none hidden md:block md:text-4xl lg:text-5xl text-neutral-400 dark:text-neutral-600 blur-[2px] opacity-30 transition-all">
-                {nextWord}
-            </div>
 
             {/* Word Display */}
             <div className="flex text-5xl sm:text-7xl md:text-8xl font-sans tracking-normal relative z-20 select-none w-full px-4 leading-none">
