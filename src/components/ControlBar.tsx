@@ -51,13 +51,13 @@ export const ControlBar = () => {
         />
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-0">
+        <div className="flex items-center gap-2 sm:gap-4 order-2 sm:order-1">
           
           {showControls && (
             <button
                 onClick={() => handleSeek(-10)}
-                className="p-3 text-muted-foreground hover:text-foreground dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all"
+                className="p-2 sm:p-3 text-muted-foreground hover:text-foreground dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all"
                 title="Rewind 10s"
             >
                 <RotateCcw size={18} /> 
@@ -66,7 +66,7 @@ export const ControlBar = () => {
 
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="group relative flex items-center justify-center p-4 bg-foreground text-background rounded-full hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
+            className="group relative flex items-center justify-center p-3 sm:p-4 bg-foreground text-background rounded-full hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             {isPlaying ? (
               <Pause size={20} className="fill-current" />
@@ -78,7 +78,7 @@ export const ControlBar = () => {
           {!showControls && (
              <button
                 onClick={reset}
-                className="p-3 text-muted-foreground hover:text-foreground dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all"
+                className="p-2 sm:p-3 text-muted-foreground hover:text-foreground dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all"
                 title="Restart"
               >
                 <RotateCcw size={18} />
@@ -88,7 +88,7 @@ export const ControlBar = () => {
           {showControls && (
             <button
                 onClick={() => handleSeek(10)}
-                className="p-3 text-muted-foreground hover:text-foreground dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all"
+                className="p-2 sm:p-3 text-muted-foreground hover:text-foreground dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all"
                 title="Forward 10s"
             >
                 <RotateCw size={18} />
@@ -96,14 +96,14 @@ export const ControlBar = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-6 flex-1 justify-end">
-          <span className="font-mono text-xs font-medium text-muted-foreground dark:text-white w-16 text-right tabular-nums tracking-wider uppercase">
+        <div className="flex items-center gap-4 sm:gap-6 flex-1 justify-center sm:justify-end w-full sm:w-auto order-1 sm:order-2">
+          <span className="font-mono text-xs font-medium text-muted-foreground dark:text-white w-14 sm:w-16 text-right tabular-nums tracking-wider uppercase shrink-0">
             {wpm}{" "}
-            <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+            <span className="hidden sm:inline text-[10px] text-neutral-400 dark:text-neutral-500">
               WPM
             </span>
           </span>
-          <div className="relative w-48 flex items-center">
+          <div className="relative flex-1 sm:flex-none w-full sm:w-48 flex items-center">
             <input
               type="range"
               min="100"

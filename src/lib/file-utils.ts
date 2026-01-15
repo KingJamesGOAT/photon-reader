@@ -32,45 +32,44 @@ const detectChapters = (fullText: string): { words: string[], chapters: Chapter[
     // 2. Extract potential chapter titles from it
     // 3. Find where those titles appear in the body text
 
-    const tocHeaderRegex = /(?:^|\n)\s*(?:Table of Contents|Contents|Index)\s*(?:\n|$)/i;
+    const tocHeaderRegex = /(?:^|\n)\s*(?:Table of Contents|Contents|Index|Sommaire)\s*(?:\n|$)/i;
     const tocMatch = fullText.match(tocHeaderRegex);
 
-    let extractedChapters: { title: string, index: number }[] = [];
+    const extractedChapters: { title: string, index: number }[] = [];
 
     if (tocMatch && tocMatch.index !== undefined) {
-        // Look at the next 50 lines or so for TOC entries
+        // Look at the next 15000 characters for TOC entries (handles larger PDFs)
         const tocStartIndex = tocMatch.index + tocMatch[0].length;
-        const potentialTocSection = fullText.substring(tocStartIndex, tocStartIndex + 3000); // Limit lookahead
+        const potentialTocSection = fullText.substring(tocStartIndex, tocStartIndex + 15000); 
         const lines = potentialTocSection.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         
-        // Try to identify titles. Usually lines that end with a number (page) or just short lines.
-        // We collect candidate titles.
         const candidateTitles = [];
         for (const line of lines) {
             // Stop if we hit a very long paragraph (likely end of TOC)
-            if (line.split(/\s+/).length > 20) break;
+            if (line.split(/\s+/).length > 25) break;
             
-            // Heuristic cleanup: remove trailing page numbers
-            const titleClean = line.replace(/[.\s\-_]*\d+$/, '').trim();
-            if (titleClean.length > 2 && titleClean.length < 100) {
+            // Heuristic cleanup: remove trailing page numbers and the dots often used (e.g. "Chapter 1.......10")
+            const titleClean = line
+                .replace(/[.\s\-_]*\d+$/, '') // Remove page number
+                .replace(/[.]{3,}/g, '')      // Remove long dot strings
+                .trim();
+
+            // Support for sub-chapters: check for numbering (e.g. 1.1, A., I.b)
+            if (titleClean.length > 2 && titleClean.length < 120) {
                 candidateTitles.push(titleClean);
             }
         }
 
-        // Now search for these titles in the fullText (AFTER the TOC section)
-        // We search for the *literal* string match.
-        // We only accept them if they appear in order? Or just find them.
-        
-        const searchStartIndex = tocStartIndex + 3000;
+        // Search for these titles in the fullText (starting shortly after TOC)
+        const searchStartIndex = tocMatch.index; 
         let lastFoundIndex = searchStartIndex;
 
         candidateTitles.forEach(title => {
-            // Escape regex special chars
             const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // Look for title as a standalone line or header
-            const titleRegex = new RegExp(`(?:^|\\n)\\s*${escapedTitle}\\s*(?:\\n|$)`, 'i');
+            // Relaxed regex: allow common title format and don't strictly require start/end of line
+            // to catch headers that might have extra styling artifacts in the PDF stream
+            const titleRegex = new RegExp(`(?:^|\\n)\\s*${escapedTitle}\\s*(?:\\n|[:.-]|$)`, 'i');
             
-            // Search manually to allow start index
             const subset = fullText.substring(lastFoundIndex);
             const match = subset.match(titleRegex);
 
@@ -82,10 +81,10 @@ const detectChapters = (fullText: string): { words: string[], chapters: Chapter[
         });
     }
 
-    // fallback: if TOC extraction yielded nothing or very few (false positives?), use strict regex
+    // fallback: if TOC extraction yielded nothing or very few, use regex
     if (extractedChapters.length < 2) {
-        // 1. Try explicit Chapter/Book headers
-        const chapterRegex = /(?:^|\n)\s*(?:Chapter|Part|Book|Section)\s+(?:(?:\d+)|(?:[IVXLCDM]+)|(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten))\s*[:.-]*\s*(?:[^\n]{0,100})(?:\n|$)/gi;
+        // Explicit Chapter/Book/Section headers
+        const chapterRegex = /(?:^|\n)\s*(?:Chapter|Part|Book|Section|Chapitre)\s+(?:(?:\d+)|(?:[IVXLCDM]+)|(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten))\s*[:.-]*\s*(?:[^\n]{0,100})(?:\n|$)/gi;
         const matches = [...fullText.matchAll(chapterRegex)];
         
         matches.forEach(m => {
@@ -94,17 +93,15 @@ const detectChapters = (fullText: string): { words: string[], chapters: Chapter[
             }
         });
 
-        // 2. Fallback: Page numbers if enabled/needed? 
-        // Only if we still have < 2 chapters
+        // Numerical headers like "1. Introduction" or "1.1 Subtitle"
         if (extractedChapters.length < 2) {
-             const pageRegex = /(?:^|\n)\s*(?:Page)\s+(\d+)\s*(?:\n|$)/gi;
-             const pageMatches = [...fullText.matchAll(pageRegex)];
-             if (pageMatches.length > 3) {
-                 extractedChapters = pageMatches.map(m => ({ 
-                     title: m[0].trim().replace(/\s+/g, ' '), 
-                     index: m.index! 
-                 }));
-             }
+            const numericRegex = /(?:^|\n)\s*(\d+(?:\.\d+)*)\.?\s+([A-Z][^\n]{3,60})(?:\n|$)/g;
+            const numMatches = [...fullText.matchAll(numericRegex)];
+            numMatches.forEach(m => {
+                if (m.index !== undefined) {
+                    extractedChapters.push({ title: `${m[1]} ${m[2]}`, index: m.index });
+                }
+            });
         }
     }
 
