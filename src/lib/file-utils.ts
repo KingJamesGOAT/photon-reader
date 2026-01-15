@@ -43,25 +43,93 @@ const processedToWords = (cleanedText: string): string[] => {
 
 export const detectChapters = (fullText: string): { words: string[], chapters: Chapter[] } => {
     // Fallback Heuristic Strategy (Used if PDF has no Outline)
-    // Same logic as before but refined.
     
     // We need to re-tokenize here to ensure word counts are accurate to the inputs
-    // However, if we are passing "clean" text, it's fine.
-    // Ideally we return the words list this function generated/used.
-    
     const words = processedToWords(fullText);
 
     const chapters: { title: string, index: number }[] = [];
     
-    // 1. Explicit Headers
-    const chapterRegex = /(?:^|\n)\s*(?:Chapter|Part|Book|Section|Chapitre)\s+(?:(?:\d+)|(?:[IVXLCDM]+)|(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten))\s*[:.-]*\s*(?:[^\n]{0,100})(?:\n|$)/gi;
-    const matches = [...fullText.matchAll(chapterRegex)];
-    matches.forEach(m => {
-        if (m.index !== undefined) chapters.push({ title: m[0].trim().replace(/\s+/g, ' '), index: m.index });
-    });
+    // Strategy A: Scan for a Visual Table of Contents
+    // ------------------------------------------------
+    // 1. Find "Content" / "Table of Contents" header
+    const tocHeaderRegex = /(?:^|\n)\s*(?:Table of Contents|Contents|Index|Sommaire|Inhalt)\s*(?:\n|$)/i;
+    const tocMatch = fullText.match(tocHeaderRegex);
 
+    if (tocMatch && tocMatch.index !== undefined) {
+        // Look ahead for potential TOC lines (limit to 10000 chars to avoid reading whole book)
+        const tocStartIndex = tocMatch.index + tocMatch[0].length;
+        const potentialTocSection = fullText.substring(tocStartIndex, tocStartIndex + 10000); 
+        const lines = potentialTocSection.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        
+        const candidateTitles: string[] = [];
+        
+        for (const line of lines) {
+            // Stop conditions:
+            // - Paragraphs (too many words)
+            // - Empty lines are already filtered
+            if (line.split(/\s+/).length > 20) break;
+            
+            // Clean up the line to get the "Title"
+            // Remove trailing page numbers, dots, dashes
+            const titleClean = line
+                .replace(/[.\s\-_]*\d+$/, '') // "Chapter 1 ... 5" -> "Chapter 1"
+                .replace(/[.]{3,}/g, '')      // "Chapter 1.........." -> "Chapter 1"
+                .trim();
+
+            // Ignore very short lines unless they look like "Chapter 1"
+            if (titleClean.length < 3) continue;
+
+            // Heuristic: Valid titles often start with a Capital letter or a Number
+            const startsWithValid = /^[A-Z0-9]/.test(titleClean);
+            if (!startsWithValid) continue;
+
+            candidateTitles.push(titleClean);
+        }
+
+        // Try to find these candidates in the body
+        // We start searching AFTER the visual TOC to avoid finding the TOC itself
+        let lastFoundIndex = tocStartIndex + 100; // Skip a bit
+
+        candidateTitles.forEach((title) => {
+             // Create a flexible regex for the title
+             // Escape special chars
+             const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+             
+             // We allow the title to be:
+             // - Start of a line OR end of a line OR preceded/followed by punctuation
+             // - Case insensitive
+             // - We need to be careful not to match common phrases in sentences.
+             //   So we generally require it to be somewhat isolated or capitalized.
+             
+             const titleRegex = new RegExp(`(?:^|\\n|\\.|!|\\?)\\s*(${escaped})\\s*(?:$|\\n|:|\\.)`, 'i');
+             
+             const subset = fullText.substring(lastFoundIndex);
+             const match = subset.match(titleRegex);
+
+             if (match && match.index !== undefined) {
+                 const actualIndex = lastFoundIndex + match.index;
+                 chapters.push({ title: title, index: actualIndex });
+                 lastFoundIndex = actualIndex + match[0].length;
+             }
+        });
+    }
+
+    // Strategy B: Explicit Headers (Regex Scan)
+    // -----------------------------------------
+    // If Strategy A failed or found too few, try scanning the whole text for "Chapter X" patterns
     if (chapters.length < 2) {
-        // 2. Numeric Headers (1. Introduction)
+        const chapterRegex = /(?:^|\n)\s*(?:Chapter|Part|Book|Section|Chapitre|Leçon)\s+(?:(?:\d+)|(?:[IVXLCDM]+)|(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten))\s*[:.-]*\s*(?:[^\n]{0,100})(?:\n|$)/gi;
+        const matches = [...fullText.matchAll(chapterRegex)];
+        matches.forEach(m => {
+            if (m.index !== undefined) chapters.push({ title: m[0].trim().replace(/\s+/g, ' '), index: m.index });
+        });
+    }
+
+    // Strategy C: Numbered Headers (1. Title)
+    // ----------------------------------------
+    if (chapters.length < 2) {
+        // "1. Introduction" or "1.1 Background"
+        // Must be at start of line
         const numericRegex = /(?:^|\n)\s*(\d+(?:\.\d+)*)\.?\s+([A-Z][^\n]{3,60})(?:\n|$)/g;
         const numMatches = [...fullText.matchAll(numericRegex)];
         numMatches.forEach(m => {
@@ -71,27 +139,28 @@ export const detectChapters = (fullText: string): { words: string[], chapters: C
 
     // Default
     if (chapters.length === 0) {
-        return { words, chapters: [{ title: 'Full Text', startIndex: 0, wordCount: 0 }] };
+        return { words, chapters: [{ title: 'Full Text', startIndex: 0, wordCount: words.length }] };
     }
 
     chapters.sort((a, b) => a.index - b.index);
 
-    // Filter duplicates or very close chapters
+    // Filter duplicates or very close chapters (e.g. repeated headers)
     const uniqueChapters = chapters.filter((c, i) => {
         if (i === 0) return true;
-        return c.index - chapters[i-1].index > 50; // Min distance
+        // Must be at least 100 chars apart to be a distinct chapter
+        return c.index - chapters[i-1].index > 100; 
     });
 
     // Map to word indices
     const finalChapters: Chapter[] = [];
     let currentWordTotal = 0;
     
-    // Prefix
-    if (uniqueChapters[0].index > 0) {
+    // Handle text BEFORE first chapter (Intro/Front matter)
+    if (uniqueChapters.length > 0 && uniqueChapters[0].index > 0) {
         const preText = fullText.substring(0, uniqueChapters[0].index);
         const preWords = processedToWords(cleanText(preText)).length;
         if (preWords > 0) {
-            finalChapters.push({ title: 'Start', startIndex: 0, wordCount: preWords });
+            finalChapters.push({ title: 'Front Matter', startIndex: 0, wordCount: preWords });
             currentWordTotal += preWords;
         }
     }
