@@ -77,8 +77,8 @@ export const Dropzone = () => {
                 className={clsx(
                     "relative group cursor-pointer overflow-hidden rounded-2xl transition-all duration-300 shadow-xl dark:shadow-none",
                     "bg-[var(--glass-bg)] backdrop-blur-sm border border-[var(--glass-border)]",
-                    "hover:bg-white/80 dark:hover:bg-neutral-900 hover:border-red-500/30 dark:hover:border-red-500/50 hover:shadow-2xl dark:hover:shadow-none",
-                    isDragging ? "ring-2 ring-red-500 bg-red-50/50 dark:bg-red-900/20" : ""
+                    "hover:bg-white/80 dark:hover:bg-neutral-900 hover:border-brand-500/30 dark:hover:border-brand-500/50 hover:shadow-2xl dark:hover:shadow-none",
+                    isDragging ? "ring-2 ring-brand-500 bg-brand-50/50 dark:bg-brand-900/20" : ""
                 )}
             >
                 <input 
@@ -91,17 +91,17 @@ export const Dropzone = () => {
                 
                 <div className="px-8 py-10 flex flex-col items-center justify-center text-center gap-3">
                     {isLoading ? (
-                         <div className="flex items-center gap-2 text-red-500 animate-pulse">
+                         <div className="flex items-center gap-2 text-brand-500 animate-pulse">
                             <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                             <span className="font-medium">Processing...</span>
                          </div>
                     ) : (
                         <>
-                            <div className="p-3 bg-neutral-100 dark:bg-transparent dark:border dark:border-white/20 rounded-full text-neutral-500 dark:text-white group-hover:text-red-500 group-hover:scale-110 transition-all duration-300">
+                            <div className="p-3 bg-neutral-100 dark:bg-transparent dark:border dark:border-white/20 rounded-full text-neutral-500 dark:text-white group-hover:text-brand-500 group-hover:scale-110 transition-all duration-300">
                                 <FileUp size={24} />
                             </div>
                             <div className="space-y-1">
-                                <p className="font-semibold text-neutral-700 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                                <p className="font-semibold text-neutral-700 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                                     Click or drop PDF / TXT
                                 </p>
                             </div>
