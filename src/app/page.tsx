@@ -15,22 +15,13 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Apply theme to body
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
-
-  useEffect(() => {
     restoreSession();
   }, [restoreSession]);
 
   return (
     <main className={clsx(
         "flex min-h-screen flex-col items-center justify-center relative overflow-x-hidden transition-colors duration-500",
-        theme === 'dark' ? "bg-background text-foreground" : "bg-neutral-50 text-neutral-900"
+        "bg-background text-foreground"
     )}>
       
       {/* Background Gradients */}
@@ -48,18 +39,18 @@ export default function Home() {
       <TableOfContents />
 
       {/* Floating Header */}
-      <nav className="fixed top-0 inset-x-0 z-30 h-16 flex items-center justify-between px-6 md:px-8 bg-transparent">
+      <nav className="fixed top-0 inset-x-0 z-30 h-16 md:h-20 flex items-center justify-between px-6 md:px-8 bg-transparent">
         <div className="flex items-center gap-4">
             <button
                 onClick={() => setIsSidebarOpen(true)}
                 className="p-2 -ml-2 rounded-lg hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors"
                 aria-label="Open Library"
             >
-                <Menu size={24} className="dark:text-white" />
+                <Menu size={24} className="text-foreground" />
             </button>
 
-            <button onClick={goHome} className="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
-                <span className="font-bold tracking-tight text-lg">PhotonReader</span>
+            <button onClick={goHome} className="flex items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
+                <span className="font-bold tracking-tight text-xl">PhotonReader</span>
             </button>
         </div>
         <button 

@@ -36,11 +36,18 @@ export const metadata: Metadata = {
       images: ["/og-image.png"],
   },
   icons: {
-    icon: "/favicon.png",
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+    ],
     shortcut: "/favicon.png",
     apple: "/favicon.png",
   },
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
+  viewport: "width=device-width, initial-scale=1, maximum-scale=5",
 };
 
 
