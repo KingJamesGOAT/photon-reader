@@ -23,10 +23,10 @@ export const Redicle = () => {
         )}>
             
             {/* Top Vertical Marker */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-[20px] bg-foreground transition-colors duration-300" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-[40px] md:h-[20px] bg-foreground transition-colors duration-300" />
             
             {/* Bottom Vertical Marker */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[2px] h-[20px] bg-foreground transition-colors duration-300" />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[2px] h-[40px] md:h-[20px] bg-foreground transition-colors duration-300" />
 
             {/* Word Display */}
             {/* Uses text-foreground for automatic Black/White switching */}

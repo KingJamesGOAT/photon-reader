@@ -12,7 +12,7 @@ import { Moon, Sun, Menu, Palette, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export default function Home() {
-  const { theme, toggleTheme, restoreSession, goHome, colorTheme, setColorTheme } = useStore();
+  const { theme, toggleTheme, restoreSession, goHome, colorTheme, setColorTheme, isFullScreen } = useStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
 
@@ -42,6 +42,7 @@ export default function Home() {
       <FullScreenOverlay />
 
       {/* Floating Header */}
+      {!isFullScreen && (
       <nav className="fixed top-0 inset-x-0 z-50 h-16 md:h-20 flex items-center justify-between px-6 md:px-8 bg-transparent">
         <div className="flex items-center gap-4">
             <button
@@ -112,6 +113,7 @@ export default function Home() {
             </button>
         </div>
       </nav>
+      )}
 
       {/* Main Content: Centered Reader + Dropzone */}
       <div className="w-full max-w-5xl flex flex-col items-center gap-12 px-6 fade-in mt-12">
