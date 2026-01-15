@@ -18,14 +18,14 @@ export const useRSVP = () => {
     
     // Punctuation multipliers
     if (/[.?!:]/.test(word)) {
-      multiplier = 2.5; // End of sentence / major pause
+      multiplier = 1.5; // End of sentence / major pause
     } else if (/[,;—\-]/.test(word)) {
-      multiplier = 1.5; // Clause break
+      multiplier = 1.2; // Clause break
     }
     
     // Long word penalty
     if (word.length > 10) {
-      multiplier *= 1.2;
+      multiplier *= 1.1;
     }
     
     return baseInterval * multiplier;
