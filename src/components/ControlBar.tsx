@@ -99,7 +99,7 @@ export const ControlBar = () => {
         <div className="flex items-center gap-4 sm:gap-6 flex-1 justify-center sm:justify-end w-full sm:w-auto order-1 sm:order-2">
           <span className="font-mono text-xs font-medium text-muted-foreground dark:text-white w-14 sm:w-16 text-right tabular-nums tracking-wider uppercase shrink-0">
             {wpm}{" "}
-            <span className="hidden sm:inline text-[10px] text-neutral-400 dark:text-neutral-500">
+            <span className="inline text-[10px] text-neutral-400 dark:text-neutral-500">
               WPM
             </span>
           </span>
