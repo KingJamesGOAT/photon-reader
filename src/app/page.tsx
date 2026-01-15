@@ -45,7 +45,10 @@ export default function Home() {
       <nav className="fixed top-0 inset-x-0 z-30 h-16 md:h-20 flex items-center justify-between px-6 md:px-8 bg-transparent">
         <div className="flex items-center gap-4">
             <button
-                onClick={() => setIsSidebarOpen(true)}
+                onClick={() => {
+                    setIsSidebarOpen(true)
+                    setIsColorPickerOpen(false)
+                }}
                 className="p-2 -ml-2 rounded-lg hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors"
                 aria-label="Open Library"
             >

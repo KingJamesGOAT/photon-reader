@@ -34,7 +34,7 @@ export const Redicle = () => {
                 <span className="text-foreground text-right w-[6ch] sm:w-[10ch] overflow-visible whitespace-nowrap">
                     {leftPart}
                 </span>
-                <span className="text-primary-600 font-bold mx-[0.5px] inline-block">
+                <span className="text-brand-600 font-bold mx-[0.5px] inline-block">
                     {pivotChar}
                 </span>
                 <span className="text-foreground text-left w-[6ch] sm:w-[10ch] overflow-visible whitespace-nowrap">

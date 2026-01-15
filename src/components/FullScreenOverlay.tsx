@@ -47,7 +47,7 @@ export const FullScreenOverlay = () => {
                 {/* Progress Bar */}
                 <div className="w-full h-2 bg-neutral-200/50 dark:bg-neutral-800 rounded-full overflow-hidden">
                     <div
-                        className="h-full bg-primary-500 rounded-full transition-all ease-linear"
+                        className="h-full bg-brand-500 rounded-full transition-all ease-linear"
                         style={{
                             width: `${progress}%`,
                             transitionDuration: `${isPlaying ? 60000 / wpm : 300}ms`
