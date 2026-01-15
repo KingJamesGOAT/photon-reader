@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@next/swc-win32-x64-msvc": "^16.1.1",
+
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "geist": "^1.5.1",
