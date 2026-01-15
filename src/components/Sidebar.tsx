@@ -106,7 +106,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
     return (
         <div className={clsx(
-            "fixed inset-y-0 left-0 z-50 w-80 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-r border-neutral-200 dark:border-neutral-800 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col",
+            "fixed inset-y-0 left-0 z-[60] w-80 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-r border-neutral-200 dark:border-neutral-800 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col",
             isOpen ? "translate-x-0" : "-translate-x-full"
         )}>
             <div className="p-4 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">

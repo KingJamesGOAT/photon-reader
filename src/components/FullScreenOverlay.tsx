@@ -29,7 +29,7 @@ export const FullScreenOverlay = () => {
             {/* Close / Minimize Button */}
             <button 
                 onClick={() => setIsFullScreen(false)}
-                className="absolute top-4 right-4 md:top-8 md:right-8 p-2 md:p-3 rounded-full hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors z-50"
+                className="absolute top-24 right-4 md:top-32 md:right-8 p-2 md:p-3 rounded-full hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors z-50"
                 aria-label="Exit Full Screen"
             >
                 <Minimize2 size={24} className="md:w-8 md:h-8 text-foreground" />
