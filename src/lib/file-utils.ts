@@ -159,7 +159,7 @@ export const extractTextFromPDF = async (file: File): Promise<ProcessedText> => 
       const pdf = await loadingTask.promise;
       
       let fullRawTextForFallback = '';
-      const pageTextData: { pageIndex: number, text: string, wordCount: number }[] = [];
+      const pageTextData: { pageIndex: number, text: string, rawText: string, wordCount: number }[] = [];
       let totalWordCount = 0;
 
       // 1. Extract Text Per Page
@@ -167,7 +167,13 @@ export const extractTextFromPDF = async (file: File): Promise<ProcessedText> => 
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         
-        // Improve text join: add space between items to avoid "hello(world)"
+        // 1. Create a version specifically for TOC detection (preserves newlines)
+        const pageTocText = textContent.items
+          // @ts-expect-error item type mismatch
+          .map((item) => item.str)
+          .join('\n'); // JOIN WITH NEWLINE
+
+        // 2. Create the standard reading version (preserves flow)
         const pageRawText = textContent.items
           // @ts-expect-error item type mismatch
           .map((item) => item.str)
@@ -179,6 +185,7 @@ export const extractTextFromPDF = async (file: File): Promise<ProcessedText> => 
         pageTextData.push({
             pageIndex: i, // 1-based
             text: pageCleanedText,
+            rawText: pageTocText, // STORE THE NEWLINE VERSION HERE for TOC detection
             wordCount: pageWords.length
         });
         
@@ -281,7 +288,8 @@ export const extractTextFromPDF = async (file: File): Promise<ProcessedText> => 
 
           if (tocPageIndex !== -1) {
               console.log("Found Visual TOC on page", tocPageIndex + 1);
-              const tocPageText = pageTextData[tocPageIndex].text;
+              // Use the rawText (newline preserved) for TOC scanning
+              const tocPageText = pageTextData[tocPageIndex].rawText; 
               const tocLines = tocPageText.split('\n');
 
               for (const line of tocLines) {
@@ -304,7 +312,8 @@ export const extractTextFromPDF = async (file: File): Promise<ProcessedText> => 
                  // - Can be short (1 char) IF it matches Roman/Numeric patterns
                  // - Or longer (3+ chars) for standard titles
                  
-                 const match = line.match(/^((?:[A-Z0-9]+)|(?:.{2,}))(?:\s|\.)+(\d+)$/i);
+                 // Aggressive Regex Updated to support "p." / "pg." / "page" prefix
+                 const match = line.match(/^((?:[A-Z0-9]+)|(?:.{2,}))(?:\s|\.|p\.|pg\.|page\s?)+(\d+)$/i);
                  
                  if (match) {
                      const rawTitle = match[1].replace(/[.]{3,}/g, '').trim();
