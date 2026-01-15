@@ -53,7 +53,7 @@ export const TableOfContents = () => {
                     {/* Header */}
                     <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50">
                         <h3 className="font-semibold text-sm flex items-center gap-2">
-                            <List size={16} className="text-red-500" />
+                            <List size={16} className="text-primary-500" />
                             Contents ({totalTime})
                         </h3>
                         <button 
@@ -83,7 +83,7 @@ export const TableOfContents = () => {
                                     className={clsx(
                                         "w-full text-left p-3 rounded-xl transition-all duration-200 group relative",
                                         isActive 
-                                            ? "bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100" 
+                                            ? "bg-primary-50 dark:bg-primary-900/20 text-primary-900 dark:text-primary-100" 
                                             : isPast
                                                 ? "text-neutral-500 dark:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                                 : "text-foreground dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
@@ -103,7 +103,7 @@ export const TableOfContents = () => {
                                             {formatTime(chapter.wordCount)}
                                         </div>
                                         {isActive && (
-                                            <div className="text-[10px] text-red-500 font-medium ml-auto animate-pulse">
+                                            <div className="text-[10px] text-primary-500 font-medium ml-auto animate-pulse">
                                                 Reading...
                                             </div>
                                         )}
@@ -118,7 +118,7 @@ export const TableOfContents = () => {
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     className={clsx(
-                        "hidden md:block absolute top-6 -left-10 p-2 rounded-l-xl bg-white dark:bg-neutral-900 border-y border-l border-neutral-200 dark:border-neutral-800 shadow-md text-neutral-500 hover:text-red-500 transition-colors",
+                        "hidden md:block absolute top-6 -left-10 p-2 rounded-l-xl bg-white dark:bg-neutral-900 border-y border-l border-neutral-200 dark:border-neutral-800 shadow-md text-neutral-500 hover:text-primary-500 transition-colors",
                         !isOpen && "translate-x-1"
                     )}
                 >
@@ -130,7 +130,7 @@ export const TableOfContents = () => {
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="md:hidden fixed bottom-6 right-6 z-30 p-4 rounded-full bg-red-500 text-white shadow-xl flex items-center justify-center animate-in zoom-in duration-300 active:scale-95 transition-transform"
+                    className="md:hidden fixed bottom-6 right-6 z-30 p-4 rounded-full bg-primary-500 text-white shadow-xl flex items-center justify-center animate-in zoom-in duration-300 active:scale-95 transition-transform"
                     aria-label="Open Contents"
                 >
                     <List size={24} />

@@ -38,6 +38,7 @@ interface AppState {
   isPlaying: boolean;
   currentIndex: number;
   theme: 'light' | 'dark';
+  colorTheme: 'red' | 'blue' | 'green';
   recentFiles: RecentFile[];
   folders: Folder[];
   chapters: Chapter[];
@@ -53,6 +54,7 @@ interface AppState {
   setIsPlaying: (isPlaying: boolean) => void;
   setCurrentIndex: (index: number) => void;
   toggleTheme: () => void;
+  setColorTheme: (theme: 'red' | 'blue' | 'green') => void;
   reset: () => void;
   loadRecentFile: (file: RecentFile) => void;
   updateRecentFileProgress: (id: string, index: number) => void;
@@ -69,6 +71,7 @@ export const useStore = create<AppState>()(
       isPlaying: false,
       currentIndex: 0,
       theme: 'light',
+      colorTheme: 'red',
       recentFiles: [],
       folders: [],
       chapters: [],
@@ -149,6 +152,7 @@ export const useStore = create<AppState>()(
       },
 
       toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
+      setColorTheme: (theme) => set({ colorTheme: theme }),
       reset: () => set({ currentIndex: 0, isPlaying: true }),
       
       loadRecentFile: (file) => {
@@ -200,6 +204,7 @@ export const useStore = create<AppState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ 
           theme: state.theme,
+          colorTheme: state.colorTheme,
           wpm: state.wpm,
           recentFiles: state.recentFiles,
           folders: state.folders,

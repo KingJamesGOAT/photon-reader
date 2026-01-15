@@ -24,7 +24,7 @@ const FileItem = ({
     <div className={clsx(
         "w-full flex items-center gap-1 p-2 rounded-xl transition-all duration-200 group relative",
         currentFileId === file.id 
-            ? "bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-900" 
+            ? "bg-primary-50 dark:bg-primary-900/20 ring-1 ring-primary-200 dark:ring-primary-900" 
             : "hover:bg-neutral-100 dark:hover:bg-neutral-800"
     )}>
         <div 
@@ -36,21 +36,21 @@ const FileItem = ({
         >
             <div className={clsx(
                 "mt-0.5 p-1.5 rounded-lg",
-                currentFileId === file.id ? "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400"
+                currentFileId === file.id ? "bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400"
             )}>
                 <FileText size={16} />
             </div>
             <div className="flex-1 min-w-0">
                 <h4 className={clsx(
                     "font-medium text-sm truncate pr-6", // Add padding for delete button
-                    currentFileId === file.id ? "text-red-900 dark:text-red-100" : "text-neutral-900 dark:text-white"
+                    currentFileId === file.id ? "text-primary-900 dark:text-primary-100" : "text-neutral-900 dark:text-white"
                 )}>
                     {file.name}
                 </h4>
                 <div className="flex items-center gap-2 mt-1">
                         <div className="h-1 flex-1 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
                         <div 
-                            className="h-full bg-red-500 rounded-full"
+                            className="h-full bg-primary-500 rounded-full"
                             style={{ width: `${(file.progress / file.wordCount) * 100}%` }}
                         />
                         </div>
@@ -68,7 +68,7 @@ const FileItem = ({
                     deleteFile(file.id);
                 }
             }}
-            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/50 text-neutral-400 hover:text-red-500 transition-all"
+            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-primary-100 dark:hover:bg-primary-900/50 text-neutral-400 hover:text-primary-500 transition-all"
             title="Delete file"
         >
             <Trash2 size={16} />
@@ -111,7 +111,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         )}>
             <div className="p-4 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
                 <h2 className="font-semibold text-lg dark:text-white flex items-center gap-2">
-                    <BookOpen size={20} className="text-red-500" />
+                    <BookOpen size={20} className="text-primary-500" />
                     Library
                 </h2>
                 <button 
@@ -131,7 +131,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                         placeholder="Search PDF..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 text-sm bg-neutral-100 dark:bg-neutral-900 border-none rounded-xl focus:ring-2 focus:ring-red-500/50 outline-none transition-all"
+                        className="w-full pl-9 pr-3 py-2 text-sm bg-neutral-100 dark:bg-neutral-900 border-none rounded-xl focus:ring-2 focus:ring-primary-500/50 outline-none transition-all"
                     />
                     {searchQuery && (
                          <button 
@@ -179,7 +179,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                 </h3>
                                 <button 
                                     onClick={() => setIsCreatingFolder(!isCreatingFolder)}
-                                    className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded text-neutral-500 hover:text-red-500 transition-colors"
+                                    className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded text-neutral-500 hover:text-primary-500 transition-colors"
                                 >
                                     <Plus size={16} />
                                 </button>
@@ -192,14 +192,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                         value={newFolderName}
                                         onChange={(e) => setNewFolderName(e.target.value)}
                                         placeholder="Name..."
-                                        className="flex-1 px-2 py-1 text-sm bg-neutral-100 dark:bg-neutral-800 rounded border-none focus:ring-1 focus:ring-red-500 outline-none"
+                                        className="flex-1 px-2 py-1 text-sm bg-neutral-100 dark:bg-neutral-800 rounded border-none focus:ring-1 focus:ring-primary-500 outline-none"
                                         autoFocus
                                         onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
                                     />
                                     <button 
                                         onClick={handleCreateFolder}
                                         disabled={!newFolderName}
-                                        className="p-1.5 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                                        className="p-1.5 bg-primary-500 text-white rounded hover:bg-primary-600 disabled:opacity-50"
                                     >
                                         <Plus size={14} />
                                     </button>
@@ -212,7 +212,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                         <div className="group flex items-center gap-1 p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer select-none text-sm text-neutral-700 dark:text-neutral-200 transition-colors">
                                             <button 
                                                 onClick={() => toggleFolder(folder.id)}
-                                                className="p-0.5 hover:text-red-500"
+                                                className="p-0.5 hover:text-primary-500"
                                             >
                                                 {expandedFolders[folder.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                             </button>
@@ -221,14 +221,14 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                                 className="flex-1 flex items-center gap-2"
                                                 onClick={() => toggleFolder(folder.id)}
                                             >
-                                                {expandedFolders[folder.id] ? <FolderOpen size={16} className="text-red-500" /> : <FolderIcon size={16} className="text-neutral-400" />}
+                                                {expandedFolders[folder.id] ? <FolderOpen size={16} className="text-primary-500" /> : <FolderIcon size={16} className="text-neutral-400" />}
                                                 <span className="font-medium">{folder.name}</span>
                                                 <span className="ml-auto text-xs text-neutral-400">{getFolderFiles(folder.id).length}</span>
                                             </div>
 
                                             <button 
                                                 onClick={() => deleteFolder(folder.id)}
-                                                className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-red-500 transition-opacity"
+                                                className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-primary-500 transition-opacity"
                                             >
                                                 <Trash2 size={14} />
                                             </button>

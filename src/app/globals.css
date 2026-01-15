@@ -71,6 +71,47 @@
 
   --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(229, 229, 229, 0.5);
+
+  /* RED THEME (Default) */
+  --primary-50: 0 86% 97%;
+  --primary-100: 0 93% 94%;
+  --primary-200: 0 96% 89%;
+  --primary-300: 0 93% 82%;
+  --primary-400: 0 91% 71%;
+  --primary-500: 0 84% 60%;
+  --primary-600: 0 72% 51%;
+  --primary-700: 0 74% 42%;
+  --primary-800: 0 70% 35%;
+  --primary-900: 0 63% 31%;
+  --primary-950: 0 75% 15%;
+}
+
+.theme-blue {
+  --primary-50: 214 100% 97%;
+  --primary-100: 214 95% 93%;
+  --primary-200: 218 89% 88%;
+  --primary-300: 218 86% 80%;
+  --primary-400: 219 84% 69%;
+  --primary-500: 221 83% 53%;
+  --primary-600: 224 76% 48%;
+  --primary-700: 226 71% 40%;
+  --primary-800: 224 64% 33%;
+  --primary-900: 226 58% 28%;
+  --primary-950: 224 64% 17%;
+}
+
+.theme-green {
+  --primary-50: 152 81% 96%;
+  --primary-100: 149 80% 90%;
+  --primary-200: 152 76% 80%;
+  --primary-300: 156 72% 67%;
+  --primary-400: 158 64% 52%;
+  --primary-500: 160 84% 39%;
+  --primary-600: 161 94% 30%;
+  --primary-700: 163 94% 24%;
+  --primary-800: 163 88% 20%;
+  --primary-900: 164 86% 16%;
+  --primary-950: 164 86% 12%;
 }
 
 .dark {

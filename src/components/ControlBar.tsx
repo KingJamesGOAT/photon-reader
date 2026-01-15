@@ -43,7 +43,7 @@ export const ControlBar = () => {
       {/* Progress Bar */}
       <div className="group w-full h-1.5 bg-neutral-200/50 dark:bg-neutral-800 rounded-full overflow-hidden mb-6 cursor-pointer">
         <div
-          className="h-full bg-red-500 rounded-full transition-all ease-linear group-hover:h-full"
+          className="h-full bg-primary-500 rounded-full transition-all ease-linear group-hover:h-full"
           style={{
             width: `${progress}%`,
             transitionDuration: `${isPlaying ? 60000 / wpm : 300}ms`
@@ -119,7 +119,7 @@ export const ControlBar = () => {
               step="25"
               value={wpm}
               onChange={(e) => setWpm(Number(e.target.value))}
-              className="w-full h-1.5 bg-neutral-200 dark:bg-white/20 rounded-lg appearance-none cursor-pointer accent-red-500 hover:accent-red-400 transition-all"
+              className="w-full h-1.5 bg-neutral-200 dark:bg-white/20 rounded-lg appearance-none cursor-pointer accent-primary-500 hover:accent-primary-400 transition-all"
             />
           </div>
         </div>
