@@ -285,27 +285,59 @@ export const extractTextFromPDF = async (file: File): Promise<ProcessedText> => 
               const tocLines = tocPageText.split('\n');
 
               for (const line of tocLines) {
-                 // Look for lines ending in a number: "Chapter 1 ...... 5"
-                 // Regex: Title (at least 3 chars) + optional dots/spaces + Number (at end)
-                 const match = line.match(/^(.{3,}.*?)(?:\s|\.)+(\d+)$/);
+                 // Aggressive Regex to capture:
+                 // 1. "Chapter 1 ...... 5"
+                 // 2. "I ......... 5" (Short Roman)
+                 // 3. "1 ......... 5" (Short Numeric)
+                 // 4. "Part I ..... 10"
+                 // 5. "1. Introduction ... 5"
+                 
+                 // Analysis:
+                 // Group 1: Title (The part before the dots/space/number)
+                 // Group 2: The Number at the end
+                 
+                 // We relax the {3,} limit to allow short chapters like "I", "II", "1".
+                 // BUT we must be careful. "The ... 5" is bad. "1 ... 5" is good.
+                 
+                 // This regex allows:
+                 // - Starts with alphanumeric
+                 // - Can be short (1 char) IF it matches Roman/Numeric patterns
+                 // - Or longer (3+ chars) for standard titles
+                 
+                 const match = line.match(/^((?:[A-Z0-9]+)|(?:.{2,}))(?:\s|\.)+(\d+)$/i);
+                 
                  if (match) {
-                     const title = match[1].replace(/[.]{3,}/g, '').trim();
+                     const rawTitle = match[1].replace(/[.]{3,}/g, '').trim();
                      const pageNum = parseInt(match[2]);
                      
+                     // Filter Check: Title shouldn't be too weird
+                     // If it's very short (<3 chars), strict check: must be Number or Roman
+                     const isShort = rawTitle.length < 3;
+                     const isNumeric = /^\d+$/.test(rawTitle);
+                     const isRoman = /^[IVXLCDM]+$/i.test(rawTitle);
+                     
+                     if (isShort && !isNumeric && !isRoman) {
+                         continue; // Skip "The" or "Of" etc
+                     }
+
                      if (!isNaN(pageNum) && pageNum > 0 && pageNum <= pageTextData.length) {
                          // Map Page Number to Word Index
-                         // pageNum is 1-based. pageTextData is 0-indexed array.
-                         // So Page 5 is at index 4.
                          const targetPageIndex = pageNum - 1;
                          
+                         // Validation: Chapter shouldn't start BEFORE the TOC
+                         if (targetPageIndex <= tocPageIndex) continue;
+
                          // Calculate cumulative word count up to this page
                          let startIndex = 0;
                          for (let p = 0; p < targetPageIndex; p++) {
                              startIndex += pageTextData[p].wordCount;
                          }
 
+                         // Avoid duplicates (if same page, maybe keep first or longest title?)
+                         // We'll filter later
+                         
                          chapters.push({
-                             title: title,
+                             title: rawTitle,
                              startIndex: startIndex,
                              wordCount: 0 // Will calc later
                          });
@@ -315,7 +347,11 @@ export const extractTextFromPDF = async (file: File): Promise<ProcessedText> => 
               
               // Sort and clean
               chapters.sort((a, b) => a.startIndex - b.startIndex);
-              // Filter duplicates or weird jumps (titles pointing to same page are ok, maybe subchapters)
+              // Filter duplicates: keep the one with the longer title if start index is same?
+              // Or just uniq
+              chapters = chapters.filter((c, index, self) => 
+                index === 0 || c.startIndex > self[index - 1].startIndex
+              );
               
               // Post-calc word counts
               if (chapters.length > 0) {
