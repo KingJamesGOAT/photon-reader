@@ -1,10 +1,10 @@
 import React from "react";
 import { useStore } from "@/store/useStore";
 import { useRSVP } from "@/hooks/useRSVP";
-import { Play, Pause, RotateCcw, RotateCw, Maximize } from "lucide-react";
+import { Play, Pause, RotateCcw, RotateCw, Maximize, Volume2, VolumeX } from "lucide-react";
 
 export const ControlBar = () => {
-  const { isPlaying, wpm, setWpm, currentFileId, reset, setIsFullScreen, isFullScreen, feedback } = useStore();
+  const { isPlaying, wpm, setWpm, currentFileId, reset, setIsFullScreen, isFullScreen, feedback, isAudioEnabled, toggleAudio } = useStore();
   const { progress } = useRSVP();
   
   const showControls = currentFileId && currentFileId !== 'demo';
@@ -38,13 +38,23 @@ export const ControlBar = () => {
         <div className="flex items-center gap-2 sm:gap-4 order-2 sm:order-1">
           
           {showControls && (
-            <button
-                onClick={() => handleSeek(-10)}
+            <>
+                <button
+                    onClick={toggleAudio}
+                    className={`p-2 sm:p-3 rounded-full transition-all ${isAudioEnabled ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                    title={isAudioEnabled ? "Mute Text-to-Speech" : "Enable Text-to-Speech"}
+                >
+                    {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                </button>
+            
+                <button
+                    onClick={() => handleSeek(-10)}
                 className="p-2 sm:p-3 text-muted-foreground hover:text-foreground dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all"
                 title="Rewind 10s"
             >
                 <RotateCcw size={18} /> 
             </button>
+            </>
           )}
 
           <button

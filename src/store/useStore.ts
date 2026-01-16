@@ -46,6 +46,7 @@ interface AppState {
   folders: Folder[];
   chapters: Chapter[];
   feedback: string | null;
+  isAudioEnabled: boolean;
 
   // Actions
   setFeedback: (feedback: string | null) => void;
@@ -71,6 +72,7 @@ interface AppState {
   restoreSession: () => void;
   togglePlaySmart: () => void;
   seekByTime: (seconds: number) => void;
+  toggleAudio: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -91,6 +93,7 @@ export const useStore = create<AppState>()(
       chapters: [],
       isFullScreen: false,
       feedback: null,
+      isAudioEnabled: false,
 
       setFeedback: (feedback) => {
         set({ feedback });
@@ -249,6 +252,8 @@ export const useStore = create<AppState>()(
         }
       },
 
+      toggleAudio: () => set((state) => ({ isAudioEnabled: !state.isAudioEnabled })),
+
       seekByTime: (seconds) => {
         const { wpm, currentIndex, content } = get();
         const wordsToSeek = Math.ceil((wpm / 60) * Math.abs(seconds));
@@ -298,6 +303,7 @@ export const useStore = create<AppState>()(
         folders: state.folders,
         currentFileId: state.currentFileId,
         currentIndex: state.currentIndex,
+        isAudioEnabled: state.isAudioEnabled,
       }),
     }
   )

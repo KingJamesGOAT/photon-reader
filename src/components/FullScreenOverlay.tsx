@@ -2,11 +2,11 @@ import React from 'react';
 import { useStore } from '@/store/useStore';
 import { useRSVP } from '@/hooks/useRSVP';
 import { Redicle } from './Redicle';
-import { Play, Pause, RotateCcw, RotateCw, Minimize2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, RotateCw, Minimize2, Volume2, VolumeX } from 'lucide-react';
 
 
 export const FullScreenOverlay = () => {
-    const { isFullScreen, setIsFullScreen, isPlaying, wpm, currentFileId, feedback } = useStore();
+    const { isFullScreen, setIsFullScreen, isPlaying, wpm, currentFileId, feedback, isAudioEnabled, toggleAudio } = useStore();
     const { progress } = useRSVP();
 
     if (!isFullScreen) return null;
@@ -65,7 +65,15 @@ export const FullScreenOverlay = () => {
                     />
                 </div>
 
-                <div className="flex items-center gap-12">
+                <div className="flex items-center gap-8 md:gap-12">
+                    <button
+                        onClick={toggleAudio}
+                        className={`p-4 rounded-full transition-all ${isAudioEnabled ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                        title={isAudioEnabled ? "Mute Text-to-Speech" : "Enable Text-to-Speech"}
+                    >
+                         {isAudioEnabled ? <Volume2 size={28} /> : <VolumeX size={28} />}
+                    </button>
+
                     <button
                         onClick={() => handleSeek(-10)}
                         className="p-6 text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all"
