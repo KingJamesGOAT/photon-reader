@@ -5,8 +5,10 @@ import { clsx } from 'clsx';
 import { useStore } from '@/store/useStore';
 
 export const Redicle = () => {
-  const { currentWord } = useRSVP();
-  const { content, currentIndex } = useStore();
+  useRSVP();
+  const { content, currentIndex, wpm } = useStore();
+
+  const currentWord = content[currentIndex] || '';
 
   // Optimal Recognition Point (ORP)
   const orpIndex = Math.floor((currentWord.length - 1) / 2);
@@ -89,7 +91,7 @@ export const Redicle = () => {
 
             {/* WPM Indicator */}
             <div className="absolute -bottom-6 right-0 text-xs font-mono text-muted-foreground opacity-60">
-               {useRSVP().wpm} wpm
+               {wpm} wpm
             </div>
         </div>
     </div>
