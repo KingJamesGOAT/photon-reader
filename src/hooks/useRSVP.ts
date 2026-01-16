@@ -14,9 +14,13 @@ export const useRSVP = () => {
   } = useStore();
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const { fetchAudio, play, pause, stop, currentTime, duration, isLoading, audioUrl, audioElement } = useEdgeTTS();
+  const { fetchAudio, play, pause, stop, currentTime, duration, isLoading, audioUrl, audioElement, isBlocked } = useEdgeTTS();
   const audioStartedRef = useRef(false);
   const audioOffsetRef = useRef(0);
+
+// ... (omitted lines)
+
+
 
   const getDelayForWord = (word: string, baseInterval: number) => {
     let multiplier = 1.0;
@@ -141,6 +145,8 @@ export const useRSVP = () => {
 
   return {
     progress: content.length > 0 ? (currentIndex / content.length) * 100 : 0,
+    isBlocked,
+    playAudio: play
   };
 };
 

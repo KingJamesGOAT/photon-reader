@@ -12,6 +12,7 @@ export interface EdgeTTSState {
     audioElement: HTMLAudioElement | null;
     currentTime: number;
     duration: number;
+    isBlocked: boolean;
 }
 
 export const useEdgeTTS = (): EdgeTTSState => {
@@ -20,6 +21,7 @@ export const useEdgeTTS = (): EdgeTTSState => {
     const [error, setError] = useState<string | null>(null);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
+    const [isBlocked, setIsBlocked] = useState(false);
     
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -64,7 +66,15 @@ export const useEdgeTTS = (): EdgeTTSState => {
             if (data.error) throw new Error(data.error);
 
             if (data.audio) {
-                const url = `data:audio/mp3;base64,${data.audio}`;
+                // Convert Base64 to Blob
+                const binaryString = window.atob(data.audio);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type: 'audio/mp3' });
+                const url = URL.createObjectURL(blob);
+
                 setAudioUrl(url);
                 if (audioRef.current) {
                     audioRef.current.src = url;
@@ -89,6 +99,14 @@ export const useEdgeTTS = (): EdgeTTSState => {
              if (promise !== undefined) {
                  promise.catch(error => {
                      console.error("EdgeTTS: play error", error);
+                     if (error.name === 'NotAllowedError') {
+                         setIsBlocked(true);
+                     }
+                 });
+                 // If promise doesn't reject immediately, we might be good.
+                 // But we can reset blocked state if it resolves?
+                 promise.then(() => {
+                     setIsBlocked(false);
                  });
              }
         }
@@ -123,6 +141,7 @@ export const useEdgeTTS = (): EdgeTTSState => {
         error,
         audioUrl,
         currentTime,
-        duration
+        duration,
+        isBlocked
     };
 };

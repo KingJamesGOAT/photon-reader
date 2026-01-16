@@ -1,11 +1,10 @@
 import React from 'react';
 import { useRSVP } from '@/hooks/useRSVP';
 import { clsx } from 'clsx';
-
 import { useStore } from '@/store/useStore';
 
 export const Redicle = () => {
-  useRSVP();
+  const { isBlocked, playAudio } = useRSVP();
   const { content, currentIndex, wpm } = useStore();
 
   const currentWord = content[currentIndex] || '';
@@ -44,6 +43,18 @@ export const Redicle = () => {
   return (
     <div className="relative flex flex-col items-center justify-center h-64 w-full max-w-3xl mx-auto mb-8">
         
+        {/* Playback Blocked Overlay */}
+        {isBlocked && (
+            <div 
+                className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm cursor-pointer"
+                onClick={() => playAudio()}
+            >
+                <div className="bg-primary text-primary-foreground px-6 py-3 rounded-full font-semibold shadow-lg animate-pulse">
+                    Tap to Enable Audio
+                </div>
+            </div>
+        )}
+
         {/* Spritz-style Guide Container */}
         {/* Uses border-foreground to automatically switch Black/White based on theme */}
         <div className={clsx(
