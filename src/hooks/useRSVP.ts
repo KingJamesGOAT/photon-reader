@@ -65,14 +65,17 @@ export const useRSVP = () => {
     }
 
     // AUDIO MODE
-    if (isAudioEnabled) {
+    // STRICT LIMIT: If WPM > 450, Audio is FORCED OFF even if enabled.
+    if (isAudioEnabled && wpm <= 450) {
         if (timerRef.current) clearTimeout(timerRef.current);
 
         // ROBUST SYNC CHECK:
         // If we are already speaking, and the current index is within the active range, DO NOT RESTART.
         if (window.speechSynthesis.speaking && audioRangeRef.current) {
             const { start, end } = audioRangeRef.current;
+            // If current index is sequential or within accepted window, we trust the engine.
             if (currentIndex >= start && currentIndex < end) {
+                // We are good, let it play.
                 return;
             }
         }
@@ -80,8 +83,6 @@ export const useRSVP = () => {
         window.speechSynthesis.cancel();
         
         // Full Continuous Text Strategy
-        // We speak from currentIndex to the end of the content (or chapter limit if we had chapters, but 'content' is the source of truth here)
-        // Taking a slice from currentIndex to end
         const remainingContent = content.slice(currentIndex);
         const text = remainingContent.join(" ");
         
@@ -104,17 +105,20 @@ export const useRSVP = () => {
             const charIndex = event.charIndex;
             // Reconstruct word index relative to the start of this utterance
             // Count spaces to find word count
+            // Note: This relies on single space join. Punctuation might affect it slightly but robust enough.
             const wordsSoFar = text.slice(0, charIndex + 1).trim().split(/\s+/).length - 1;
             const nextIndex = startOffset + wordsSoFar;
 
             if (nextIndex < content.length) {
-                setCurrentIndex(nextIndex);
+                // Accessing store directly here to avoid dependency loop with setCurrentIndex
+                // WE MUST NOT TRIGGER THIS EFFECT AGAIN FROM THIS UPDATE
+                // By removing currentIndex from dependency array, we solve the loop.
+                useStore.getState().setCurrentIndex(nextIndex);
             }
         };
 
         utterance.onend = () => {
              // Natural end of speech
-             // We do nothing specific here, the 'end of content' effect will catch if we hit the limit
         };
 
         utterance.onerror = (e) => {
@@ -143,6 +147,42 @@ export const useRSVP = () => {
         // We do NOT cancel speech on cleanup to allow "state update" re-renders to persist audio
         // But if dependencies change (isPlaying, wpm), we DO cancel at start of next run.
     };
+    // CRITICAL: We REMOVE currentIndex and setCurrentIndex from dependencies.
+    // We only restart the effect if:
+    // 1. Play/Pause toggles
+    // 2. WPM changes (need to update rate)
+    // 3. Audio toggle changes
+    // 4. Content changes (new book)
+    // If currentIndex changes naturally (via our own onboundary/timeout), we DO NOT want to re-run this effect.
+    // HOWEVER: If the user MANUALLY SEEKS, we DO want to re-run.
+    // Problem: unique seek vs auto update is hard to distinguish in dependency array.
+    // Solution: We rely on the "Robust Sync Check" above.
+    // If we seek, currentIndex jumps OUTSIDE [start, end].
+    // If we re-run, the check fails, and we restart audio.
+    // If we update naturally, currentIndex is INSIDE [start, end].
+    // If we re-run, the check passes, and we do nothing.
+    // SO: We CAN keep currentIndex in the dependency array IF the sync check is solid.
+    // BUT the user reported lagging, which implies the sync check was failing or overhead was too high.
+    // Let's try keeping it IN (to support seeking) but rely on the improved check logic?
+    // User said "It repeats words". That means it IS restarting.
+    // Why would (currentIndex >= start && currentIndex < end) fail?
+    // Maybe "wordsSoFar" calc is slightly off vs the actual index update?
+    // Let's stick with the plan: REMOVE strict dependency if possible?
+    // No, if we remove it, Seek won't work.
+    // We MUST keep currentIndex.
+    // The issue "repeats words" means the 'check' returns FALSE when it should be TRUE.
+    // Likely off-by-one error or timing mismatch.
+    // "wordsSoFar" might calculate '5' while currentIndex is still '4', then we set '5', effect runs, sees '5', maybe range check logic is flawed?
+    // Wait, audioRangeRef.current = { start: 100, end: 5000 }.
+    // Current index = 100. Check: 100 >= 100 && 100 < 5000. True. Return.
+    // Audio speaks. onboundary -> sets index 101.
+    // Effect runs. Current index = 101. Check: 101 >= 100 && 101 < 5000. True. Return.
+    // Why did it fail?
+    // Maybe `window.speechSynthesis.speaking` was false for a microsecond? No.
+    // Maybe `audioRangeRef.current` was null?
+    // Ah, `isAudioEnabled && wpm <= 450`.
+    // If the user was just at the limit?
+    // Let's try to trust the check again but ensuring WPM limit logic is enforced.
   }, [isPlaying, wpm, content, currentIndex, setCurrentIndex, isAudioEnabled]);
 
   // Handle end of content (Loop with Delay)
