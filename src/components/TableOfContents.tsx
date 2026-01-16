@@ -118,8 +118,8 @@ export const TableOfContents = () => {
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     className={clsx(
-                        "hidden md:flex absolute top-1/2 -translate-y-1/2 -left-8 w-8 h-48 max-h-full rounded-l-2xl bg-white dark:bg-neutral-900 border-y border-l border-neutral-200 dark:border-neutral-800 shadow-xl text-neutral-400 hover:text-brand-500 transition-colors items-center justify-center",
-                        !isOpen && "translate-x-1"
+                        "hidden md:flex absolute top-1/2 -translate-y-1/2 -left-8 w-8 h-48 max-h-full rounded-l-2xl bg-white dark:bg-neutral-900 border-y border-l border-neutral-200 dark:border-neutral-800 shadow-xl text-neutral-400 hover:text-brand-500 transition-colors items-center justify-center z-50",
+                        !isOpen ? "translate-x-1" : "-mr-px border-r-0"
                     )}
                 >
                     {isOpen ? <ChevronRight size={20} /> : <List size={20} />}

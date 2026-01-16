@@ -45,7 +45,14 @@ export const FullScreenOverlay = () => {
             </div>
 
             {/* Simplified Controls */}
-            <div className="mt-24 flex flex-col items-center gap-8 w-full max-w-xl text-foreground">
+            <div className="mt-12 flex flex-col items-center gap-8 w-full max-w-xl text-foreground relative">
+                
+                {/* Visual Feedback Overlay - Positioned above controls */}
+                {feedback && (
+                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 text-xl font-bold text-brand-500 animate-in fade-in zoom-in slide-in-from-bottom-4 duration-200 whitespace-nowrap z-50">
+                        {feedback}
+                    </div>
+                )}
                 
                 {/* Progress Bar */}
                 <div className="w-full h-2 bg-neutral-200/50 dark:bg-neutral-800 rounded-full overflow-hidden">
@@ -83,17 +90,6 @@ export const FullScreenOverlay = () => {
                     >
                         <RotateCw size={40} />
                     </button>
-                </div>
-
-                {/* Visual Feedback Overlay */}
-                {feedback && (
-                    <div className="text-xl font-medium text-brand-500 animate-in fade-in zoom-in duration-200">
-                        {feedback}
-                    </div>
-                )}
-
-                <div className="font-mono text-xl opacity-50">
-                    {wpm} WPM
                 </div>
             </div>
         </div>
