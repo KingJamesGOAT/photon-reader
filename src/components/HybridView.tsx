@@ -7,10 +7,23 @@ export const HybridView = () => {
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Static Paging Logic
-    const WORDS_PER_PAGE = 50;
-    const pageIndex = Math.floor(currentIndex / WORDS_PER_PAGE);
-    const start = pageIndex * WORDS_PER_PAGE;
-    const end = Math.min(content.length, start + WORDS_PER_PAGE);
+    const [wordsPerPage, setWordsPerPage] = React.useState(50);
+
+    React.useEffect(() => {
+        const handleResize = () => {
+             // Mobile: 25 words to prevent scrolling and overflow
+             // Desktop: 50 words
+             setWordsPerPage(window.innerWidth < 768 ? 25 : 50);
+        };
+        
+        handleResize(); // Init
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const pageIndex = Math.floor(currentIndex / wordsPerPage);
+    const start = pageIndex * wordsPerPage;
+    const end = Math.min(content.length, start + wordsPerPage);
     const visibleWords = content.slice(start, end);
 
     // Auto-scroll to top when page changes
@@ -26,12 +39,12 @@ export const HybridView = () => {
         <div 
             className={clsx(
                 "w-full max-w-2xl mt-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-black/20 backdrop-blur-sm overflow-hidden transition-all duration-500",
-                "h-32 md:h-auto md:max-h-60" 
+                "h-auto md:max-h-60" 
             )}
         >
             <div 
                 ref={containerRef}
-                className="h-full overflow-y-auto p-4 md:p-6 text-center space-x-1.5 md:space-x-2 leading-relaxed touch-pan-y"
+                className="h-full overflow-hidden p-4 md:p-6 text-center space-x-1.5 md:space-x-2 leading-relaxed touch-pan-x select-none"
             >
                 {visibleWords.map((word, i) => {
                     const globalIndex = start + i;

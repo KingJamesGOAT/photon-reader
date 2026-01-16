@@ -6,7 +6,7 @@ import { Play, Pause, RotateCcw, RotateCw, Minimize2 } from 'lucide-react';
 
 
 export const FullScreenOverlay = () => {
-    const { isFullScreen, setIsFullScreen, isPlaying, wpm, currentFileId } = useStore();
+    const { isFullScreen, setIsFullScreen, isPlaying, wpm, currentFileId, feedback } = useStore();
     const { progress } = useRSVP();
 
     if (!isFullScreen) return null;
@@ -25,6 +25,13 @@ export const FullScreenOverlay = () => {
 
     return (
         <div className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-300">
+            
+            {/* Visual Feedback Overlay */}
+            {feedback && (
+                <div className="absolute top-1/4 md:top-1/3 left-1/2 -translate-x-1/2 z-[60] text-4xl md:text-6xl font-bold text-brand-500 animate-in fade-in zoom-in duration-200 drop-shadow-lg">
+                    {feedback}
+                </div>
+            )}
             
             {/* Close / Minimize Button */}
             <button 

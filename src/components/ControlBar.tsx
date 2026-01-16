@@ -1,33 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useStore } from "@/store/useStore";
 import { useRSVP } from "@/hooks/useRSVP";
 import { Play, Pause, RotateCcw, RotateCw, Maximize } from "lucide-react";
 
 export const ControlBar = () => {
-  const { isPlaying, wpm, setWpm, currentFileId, reset, setIsFullScreen, isFullScreen } = useStore();
+  const { isPlaying, wpm, setWpm, currentFileId, reset, setIsFullScreen, isFullScreen, feedback } = useStore();
   const { progress } = useRSVP();
-  const [feedback, setFeedback] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (feedback) {
-      const timer = setTimeout(() => setFeedback(null), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [feedback]);
-
+  
   const showControls = currentFileId && currentFileId !== 'demo';
 
   const handleSeek = (seconds: number) => {
-      const wordsToSeek = Math.ceil((wpm / 60) * Math.abs(seconds));
-      const { currentIndex, content, setCurrentIndex } = useStore.getState();
-      
-      if (seconds < 0) {
-        setCurrentIndex(Math.max(0, currentIndex - wordsToSeek));
-        setFeedback(`-${Math.abs(seconds)}s`);
-      } else {
-        setCurrentIndex(Math.min(content.length - 1, currentIndex + wordsToSeek));
-        setFeedback(`+${Math.abs(seconds)}s`);
-      }
+      useStore.getState().seekByTime(seconds);
   };
 
   return (

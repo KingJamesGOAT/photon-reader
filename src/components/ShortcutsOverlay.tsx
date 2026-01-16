@@ -23,7 +23,7 @@ export const ShortcutsOverlay = () => {
 
     return (
         <div 
-            className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-none"
+            className="hidden md:flex fixed bottom-6 right-6 z-50 flex-col items-end pointer-events-none"
         >
             {/* The Card */}
             <div 

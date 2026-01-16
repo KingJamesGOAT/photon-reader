@@ -39,10 +39,10 @@ export const TableOfContents = () => {
                 className={clsx(
                     "fixed transition-all duration-300 ease-in-out z-40",
                     // Mobile: Centered bottom-sheet style or full screen
-                    "inset-x-4 bottom-4 md:inset-auto md:right-4 md:top-24",
+                    "inset-x-4 bottom-4 md:inset-auto md:right-0 md:top-24",
                     isOpen 
                         ? "translate-y-0 opacity-100" 
-                        : "translate-y-full opacity-0 md:translate-y-0 md:translate-x-[calc(100%+20px)] md:opacity-100 pointer-events-none md:pointer-events-auto"
+                        : "translate-y-full opacity-0 md:translate-y-0 md:translate-x-full md:opacity-100 pointer-events-none md:pointer-events-auto"
                 )}
             >
                 <div className={clsx(
@@ -118,11 +118,11 @@ export const TableOfContents = () => {
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     className={clsx(
-                        "hidden md:block absolute top-32 -left-10 p-2 rounded-l-xl bg-white dark:bg-neutral-900 border-y border-l border-neutral-200 dark:border-neutral-800 shadow-md text-neutral-500 hover:text-brand-500 transition-colors",
+                        "hidden md:flex absolute top-1/2 -translate-y-1/2 -left-8 w-8 h-48 rounded-l-2xl bg-white dark:bg-neutral-900 border-y border-l border-neutral-200 dark:border-neutral-800 shadow-xl text-neutral-400 hover:text-brand-500 transition-colors items-center justify-center",
                         !isOpen && "translate-x-1"
                     )}
                 >
-                    {isOpen ? <ChevronRight size={18} /> : <List size={18} />}
+                    {isOpen ? <ChevronRight size={20} /> : <List size={20} />}
                 </button>
             </div>
 
