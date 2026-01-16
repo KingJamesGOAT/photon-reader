@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '@/store/useStore';
+import { useEdgeTTS } from './useEdgeTTS';
 
 export const useRSVP = () => {
   const { 
@@ -9,132 +10,85 @@ export const useRSVP = () => {
     currentIndex, 
     setCurrentIndex, 
     setIsPlaying,
-    isAudioEnabled 
+    isAudioEnabled
   } = useStore();
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const { fetchAudio, play, pause, stop, currentTime, duration, isLoading, audioUrl, audioElement } = useEdgeTTS();
+  const audioStartedRef = useRef(false);
+  const audioOffsetRef = useRef(0);
 
   const getDelayForWord = (word: string, baseInterval: number) => {
     let multiplier = 1.0;
-    
-    // Punctuation multipliers
-    if (/[.?!:]/.test(word)) {
-      multiplier = 1.5; // End of sentence / major pause
-    } else if (/[,;—\-]/.test(word)) {
-      multiplier = 1.2; // Clause break
-    }
-    
-    // Long word penalty
-    if (word.length > 10) {
-      multiplier *= 1.1;
-    }
-    
+    if (/[.?!:]/.test(word)) multiplier = 1.5;
+    else if (/[,;—\-]/.test(word)) multiplier = 1.2;
+    if (word.length > 10) multiplier *= 1.1;
     return baseInterval * multiplier;
   };
 
-  // Track audio state to prevent re-renders loops
-  const audioRangeRef = useRef<{ start: number, end: number } | null>(null);
-
-  // Load voices
-  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  // Sync Visuals to Audio Time (The Karaoke Pattern)
   useEffect(() => {
-    const loadVoices = () => {
-        const voices = window.speechSynthesis.getVoices();
-        // Priority: Google US English -> Microsoft David -> Male -> Default
-        voiceRef.current = voices.find(v => v.name.includes("Google US English")) ||
-                           voices.find(v => v.name.includes("Microsoft David")) ||
-                           voices.find(v => v.name.includes("Male")) ||
-                           voices[0] || null;
-    };
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    return () => { window.speechSynthesis.onvoiceschanged = null; };
-  }, []);
+    if (isAudioEnabled && isPlaying && audioUrl && !isLoading) {
+        // ... (sync logic)
+        if (duration > 0 && audioElement && !audioElement.paused) {
+             const remainingText = content.slice(audioOffsetRef.current);
+             const wordCount = remainingText.length;
+             const wordsPerSecond = wordCount / duration;
+             
+             const relativeIndex = Math.floor(currentTime * wordsPerSecond);
+             const nextIndex = audioOffsetRef.current + relativeIndex;
+             
+             if (nextIndex !== currentIndex && nextIndex < content.length) {
+                 setCurrentIndex(nextIndex);
+             }
+        }
+    }
+  }, [currentTime, duration, isAudioEnabled, isPlaying, audioUrl, content, audioOffsetRef, currentIndex, setCurrentIndex, audioElement, isLoading]);
 
-  // Last auto-updated index (to detect manual seeks)
-  const lastAutoIndexRef = useRef<number>(-1);
 
-  // Main RSVP Loop (Timer or Audio)
+  // Main Control Loop
   useEffect(() => {
     if (!isPlaying) {
         if (timerRef.current) clearTimeout(timerRef.current);
-        window.speechSynthesis.cancel();
-        audioRangeRef.current = null;
-        lastAutoIndexRef.current = -1;
+        if (isAudioEnabled) pause(); 
         return;
     }
 
-    if (content.length === 0 || currentIndex >= content.length) {
-        return;
-    }
+    if (content.length === 0 || currentIndex >= content.length) return;
 
     // AUDIO MODE
-    // STRICT LIMIT: If WPM > 450, Audio is FORCED OFF even if enabled.
-    if (isAudioEnabled && wpm <= 450) {
+    if (isAudioEnabled) {
         if (timerRef.current) clearTimeout(timerRef.current);
-
-        // MANUAL SEEK DETECTION:
-        // If we are already speaking, and the current index matches our last "auto" update,
-        // it means this Effect run was triggered by our own onboundary event. WE MUST IGNORE IT.
-        if (window.speechSynthesis.speaking && audioRangeRef.current) {
-             // If currentIndex matches the last auto-set index, it's an auto-advance. DO NOT RESTART.
-             if (currentIndex === lastAutoIndexRef.current) {
-                 return;
-             }
-             // If currentIndex is different, it means the user MANUALLY sought to a new spot.
-             // We fall through to restart audio.
+        
+        // If we have audio and are just paused, resume
+        if (audioUrl && !audioStartedRef.current) {
+             play();
+             audioStartedRef.current = true;
+             return;
         }
-        
-        window.speechSynthesis.cancel();
-        
-        // Full Continuous Text Strategy
-        const remainingContent = content.slice(currentIndex);
-        const text = remainingContent.join(" ");
-        
-        if (!text.trim()) return;
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        if (voiceRef.current) utterance.voice = voiceRef.current;
-        
-        // Rate mapping
-        const baseRate = wpm / 150; 
-        const rate = Math.min(Math.max(baseRate, 0.1), 10);
-        utterance.rate = rate;
+        // If we need new audio (seeked or fresh start)
+        if (!audioStartedRef.current && !isLoading) {
+            audioOffsetRef.current = currentIndex;
+            const text = content.slice(currentIndex).join(" ");
+            // Edge TTS: 0% = default. +100% = 2x.
+            // Default is usually ~150 WPM.
+            const ratePercent = ((wpm / 150) - 1) * 100;
+            
+            fetchAudio(text, ratePercent).then(() => {
+                audioStartedRef.current = true;
+                play();
+            });
+        }
+        else if (audioStartedRef.current && audioElement?.paused && !isLoading) {
+             play();
+        }
 
-        const startOffset = currentIndex;
-        // Range covers until the end of the content
-        audioRangeRef.current = { start: startOffset, end: content.length };
-        // Reset auto index for new stream
-        lastAutoIndexRef.current = startOffset; 
-
-        utterance.onboundary = (event) => {
-            const charIndex = event.charIndex;
-            const wordsSoFar = text.slice(0, charIndex + 1).trim().split(/\s+/).length - 1;
-            const nextIndex = startOffset + wordsSoFar;
-
-            if (nextIndex < content.length && nextIndex !== currentIndex) {
-                // MARK THIS AS AN AUTO UPDATE before calling set state
-                lastAutoIndexRef.current = nextIndex;
-                useStore.getState().setCurrentIndex(nextIndex);
-            }
-        };
-
-        utterance.onend = () => {
-             // Natural end of speech
-        };
-
-        utterance.onerror = (e) => {
-            console.error("TTS Error", e);
-            audioRangeRef.current = null;
-        };
-
-        window.speechSynthesis.speak(utterance);
     } 
-    // TIMER MODE (Standard)
+    // TIMER MODE
     else {
-        window.speechSynthesis.cancel();
-        audioRangeRef.current = null;
-        
+        if (audioUrl) pause(); // Ensure audio stops if we switch mode
+
         const baseInterval = 60000 / wpm;
         const currentWord = content[currentIndex] || '';
         const delay = getDelayForWord(currentWord, baseInterval);
@@ -147,36 +101,42 @@ export const useRSVP = () => {
     return () => {
         if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isPlaying, wpm, content, currentIndex, setCurrentIndex, isAudioEnabled]);
+  }, [isPlaying, wpm, content, currentIndex, isAudioEnabled, audioUrl, isLoading, fetchAudio, play, pause, audioElement, setCurrentIndex]);
 
-  // Handle end of content (Loop with Delay)
-  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Handle Seek Reset
+  // If currentIndex changes significantly without audio driving it, we must reset audio?
+  // This is tricky. Let's rely on the store action 'seekByTime' or 'update' to reset 'audioUrl' maybe?
+  // Or: compare currentIndex with expected range.
+  // For now, let's just make sure unmount stops it.
 
+  // Handle end
   useEffect(() => {
-    // If we reached the end
     if (currentIndex >= content.length && isPlaying) {
       setIsPlaying(false);
-      window.speechSynthesis.cancel();
+      audioStartedRef.current = false;
+      stop(); // Stop audio
       
-      if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
-      restartTimeoutRef.current = setTimeout(() => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setTimeout(() => {
           setCurrentIndex(0);
-          setIsPlaying(true);
+          // Auto restart? maybe
+          audioOffsetRef.current = 0;
+          stop();
       }, 1000); 
     }
-  }, [currentIndex, content.length, isPlaying, setIsPlaying, setCurrentIndex]);
+  }, [currentIndex, content.length, isPlaying, setIsPlaying, setCurrentIndex, stop]);
 
-  // Cleanup on unmount
+  // Cleanup
   useEffect(() => {
       return () => {
-          if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
-          window.speechSynthesis.cancel();
+          if (timerRef.current) clearTimeout(timerRef.current);
+          stop();
       };
   }, []);
 
   return {
-    currentWord: content[currentIndex] || '',
     progress: content.length > 0 ? (currentIndex / content.length) * 100 : 0,
-    wpm
   };
 };
+
+
