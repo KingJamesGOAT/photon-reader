@@ -67,11 +67,20 @@ export const FullScreenOverlay = () => {
 
                 <div className="flex items-center gap-8 md:gap-12">
                     <button
-                        onClick={toggleAudio}
-                        className={`p-4 rounded-full transition-all ${isAudioEnabled ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
-                        title={isAudioEnabled ? "Mute Text-to-Speech" : "Enable Text-to-Speech"}
+                        onClick={wpm > 450 ? undefined : toggleAudio}
+                        className={`p-4 rounded-full transition-all ${wpm > 450 ? 'text-neutral-300 dark:text-neutral-700 cursor-not-allowed' : isAudioEnabled ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                        title={wpm > 450 ? "Audio unavailable > 450 WPM" : (isAudioEnabled ? "Mute Text-to-Speech" : "Enable Text-to-Speech")}
                     >
-                         {isAudioEnabled ? <Volume2 size={28} /> : <VolumeX size={28} />}
+                         {wpm > 450 ? (
+                            <div className="relative">
+                                <VolumeX size={28} />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-full h-0.5 bg-current rotate-45" />
+                                </div>
+                            </div>
+                         ) : (
+                            isAudioEnabled ? <Volume2 size={28} /> : <VolumeX size={28} />
+                         )}
                     </button>
 
                     <button

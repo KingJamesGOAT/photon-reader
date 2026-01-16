@@ -72,62 +72,49 @@ export const useRSVP = () => {
         // If we are already speaking, and the current index is within the active range, DO NOT RESTART.
         if (window.speechSynthesis.speaking && audioRangeRef.current) {
             const { start, end } = audioRangeRef.current;
-            // If current index is sequential or within accepted window, we trust the engine.
             if (currentIndex >= start && currentIndex < end) {
-                // We are good, let it play.
                 return;
             }
         }
         
-        // If we got here, we need to start/restart speech (seek happened or chunk ended)
         window.speechSynthesis.cancel();
         
-        const CHUNK_SIZE = 50;
-        const chunk = content.slice(currentIndex, currentIndex + CHUNK_SIZE);
-        const text = chunk.join(" "); // Standard join
+        // Full Continuous Text Strategy
+        // We speak from currentIndex to the end of the content (or chapter limit if we had chapters, but 'content' is the source of truth here)
+        // Taking a slice from currentIndex to end
+        const remainingContent = content.slice(currentIndex);
+        const text = remainingContent.join(" ");
         
         if (!text.trim()) return;
 
         const utterance = new SpeechSynthesisUtterance(text);
         if (voiceRef.current) utterance.voice = voiceRef.current;
         
-        // Rate mapping (experimental but standard)
+        // Rate mapping
         // 1.0 rate ~ 150-160 WPM
         const baseRate = wpm / 150; 
         const rate = Math.min(Math.max(baseRate, 0.1), 10);
         utterance.rate = rate;
 
         const startOffset = currentIndex;
-        audioRangeRef.current = { start: startOffset, end: startOffset + CHUNK_SIZE };
+        // Range covers until the end of the content
+        audioRangeRef.current = { start: startOffset, end: content.length };
 
         utterance.onboundary = (event) => {
-            // Reconstruct word index from char index
             const charIndex = event.charIndex;
-            // Count spaces before charIndex to estimate word count
-            // Note: This relies on single space join. Punctuation might affect it slightly but robust enough.
+            // Reconstruct word index relative to the start of this utterance
+            // Count spaces to find word count
             const wordsSoFar = text.slice(0, charIndex + 1).trim().split(/\s+/).length - 1;
             const nextIndex = startOffset + wordsSoFar;
 
             if (nextIndex < content.length) {
-                // We use the function form of setState to avoid stale closures if possible,
-                // BUT we are in an event handler. store.getState() access might be safer if outside component?
-                // interacting with store hook directly is fine.
-                // We update the store. The store update triggers re-render.
-                // The re-render triggers this effect.
-                // The effect sees we are in range -> Returns Early! -> No Loop!
                 setCurrentIndex(nextIndex);
             }
         };
 
         utterance.onend = () => {
-            // When chunk ends, if we are still playing, move to next chunk
-            const nextChunkStart = startOffset + CHUNK_SIZE;
-            if (isPlaying && nextChunkStart < content.length) {
-                 // We push the index forward. This changes state -> Effect runs.
-                 // Effect sees currentIndex (new) is >= audioRangeRef.current.end (old).
-                 // So it fails the "Range Check" and RESTARTS speech. Correct!
-                 setCurrentIndex(nextChunkStart); 
-            }
+             // Natural end of speech
+             // We do nothing specific here, the 'end of content' effect will catch if we hit the limit
         };
 
         utterance.onerror = (e) => {

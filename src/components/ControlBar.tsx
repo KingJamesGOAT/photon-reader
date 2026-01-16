@@ -40,11 +40,20 @@ export const ControlBar = () => {
           {showControls && (
             <>
                 <button
-                    onClick={toggleAudio}
-                    className={`p-2 sm:p-3 rounded-full transition-all ${isAudioEnabled ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
-                    title={isAudioEnabled ? "Mute Text-to-Speech" : "Enable Text-to-Speech"}
+                    onClick={wpm > 450 ? undefined : toggleAudio}
+                    className={`p-2 sm:p-3 rounded-full transition-all ${wpm > 450 ? 'text-neutral-300 dark:text-neutral-700 cursor-not-allowed' : isAudioEnabled ? 'text-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                    title={wpm > 450 ? "Audio unavailable > 450 WPM" : (isAudioEnabled ? "Mute Text-to-Speech" : "Enable Text-to-Speech")}
                 >
-                    {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                    {wpm > 450 ? (
+                        <div className="relative">
+                            <VolumeX size={18} />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-full h-0.5 bg-current rotate-45" />
+                            </div>
+                        </div>
+                    ) : (
+                        isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />
+                    )}
                 </button>
             
                 <button
