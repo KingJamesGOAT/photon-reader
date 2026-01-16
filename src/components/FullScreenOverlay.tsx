@@ -27,11 +27,7 @@ export const FullScreenOverlay = () => {
         <div className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-300">
             
             {/* Visual Feedback Overlay */}
-            {feedback && (
-                <div className="absolute top-1/4 md:top-1/3 left-1/2 -translate-x-1/2 z-[60] text-4xl md:text-6xl font-bold text-brand-500 animate-in fade-in zoom-in duration-200 drop-shadow-lg">
-                    {feedback}
-                </div>
-            )}
+
             
             {/* Close / Minimize Button */}
             <button 
@@ -88,6 +84,13 @@ export const FullScreenOverlay = () => {
                         <RotateCw size={40} />
                     </button>
                 </div>
+
+                {/* Visual Feedback Overlay */}
+                {feedback && (
+                    <div className="text-xl font-medium text-brand-500 animate-in fade-in zoom-in duration-200">
+                        {feedback}
+                    </div>
+                )}
 
                 <div className="font-mono text-xl opacity-50">
                     {wpm} WPM
