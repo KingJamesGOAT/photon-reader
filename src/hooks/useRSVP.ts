@@ -75,9 +75,14 @@ export const useRSVP = () => {
             // Default is usually ~150 WPM.
             const ratePercent = ((wpm / 150) - 1) * 100;
             
-            fetchAudio(text, ratePercent).then(() => {
-                audioStartedRef.current = true;
-                play();
+            fetchAudio(text, ratePercent).then((success) => {
+                if (success) {
+                    audioStartedRef.current = true;
+                    play();
+                } else {
+                    console.error("RSVP: Audio fetch failed");
+                    // Potentially pause or show error?
+                }
             });
         }
         else if (audioStartedRef.current && audioElement?.paused && !isLoading) {

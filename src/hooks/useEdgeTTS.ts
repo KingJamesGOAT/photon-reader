@@ -8,7 +8,7 @@ export interface EdgeTTSState {
     pause: () => void;
     stop: () => void;
     seek: (time: number) => void;
-    fetchAudio: (text: string, rate?: number) => Promise<void>;
+    fetchAudio: (text: string, rate?: number) => Promise<boolean>;
     audioElement: HTMLAudioElement | null;
     currentTime: number;
     duration: number;
@@ -46,7 +46,7 @@ export const useEdgeTTS = (): EdgeTTSState => {
     }, []);
 
     const fetchAudio = useCallback(async (text: string, rate: number = 0) => {
-        if (!text.trim()) return;
+        if (!text.trim()) return false;
 
         setIsLoading(true);
         setError(null);
@@ -74,15 +74,33 @@ export const useEdgeTTS = (): EdgeTTSState => {
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
             setError(errorMessage);
-            console.error(err);
+            console.error("EdgeTTS Error:", errorMessage);
+            return false;
         } finally {
             setIsLoading(false);
         }
+        return true;
     }, []);
 
-    const play = useCallback(() => audioRef.current?.play(), []);
-    const pause = useCallback(() => audioRef.current?.pause(), []);
+    const play = useCallback(() => {
+        console.log("EdgeTTS: play called", audioRef.current);
+        if (audioRef.current) {
+             const promise = audioRef.current.play();
+             if (promise !== undefined) {
+                 promise.catch(error => {
+                     console.error("EdgeTTS: play error", error);
+                 });
+             }
+        }
+    }, []);
+
+    const pause = useCallback(() => {
+        console.log("EdgeTTS: pause called");
+        audioRef.current?.pause();
+    }, []);
+
     const stop = useCallback(() => {
+        console.log("EdgeTTS: stop called");
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
