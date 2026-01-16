@@ -13,8 +13,6 @@ export const useRSVP = () => {
   } = useStore();
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const isEngineUpdating = useRef(false);
-  const chunkOffsetRef = useRef(0);
 
   const getDelayForWord = (word: string, baseInterval: number) => {
     let multiplier = 1.0;
@@ -34,88 +32,107 @@ export const useRSVP = () => {
     return baseInterval * multiplier;
   };
 
+  // Track audio state to prevent re-renders loops
+  const audioRangeRef = useRef<{ start: number, end: number } | null>(null);
+
+  // Load voices
+  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  useEffect(() => {
+    const loadVoices = () => {
+        const voices = window.speechSynthesis.getVoices();
+        // Priority: Google US English -> Microsoft David -> Male -> Default
+        voiceRef.current = voices.find(v => v.name.includes("Google US English")) ||
+                           voices.find(v => v.name.includes("Microsoft David")) ||
+                           voices.find(v => v.name.includes("Male")) ||
+                           voices[0] || null;
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, []);
+
   // Main RSVP Loop (Timer or Audio)
   useEffect(() => {
-    // If update came from the audio engine itself, ignore it to prevent loop
-    if (isEngineUpdating.current) {
-        isEngineUpdating.current = false;
-        return;
-    }
-
     if (!isPlaying) {
-        // Cancel any active speech or timers
         if (timerRef.current) clearTimeout(timerRef.current);
         window.speechSynthesis.cancel();
+        audioRangeRef.current = null;
         return;
     }
 
     if (content.length === 0 || currentIndex >= content.length) {
-        return; 
+        return;
     }
 
     // AUDIO MODE
     if (isAudioEnabled) {
         if (timerRef.current) clearTimeout(timerRef.current);
+
+        // ROBUST SYNC CHECK:
+        // If we are already speaking, and the current index is within the active range, DO NOT RESTART.
+        if (window.speechSynthesis.speaking && audioRangeRef.current) {
+            const { start, end } = audioRangeRef.current;
+            // If current index is sequential or within accepted window, we trust the engine.
+            if (currentIndex >= start && currentIndex < end) {
+                // We are good, let it play.
+                return;
+            }
+        }
         
-        // Chunking Strategy: Speak next 50 words
+        // If we got here, we need to start/restart speech (seek happened or chunk ended)
+        window.speechSynthesis.cancel();
+        
         const CHUNK_SIZE = 50;
         const chunk = content.slice(currentIndex, currentIndex + CHUNK_SIZE);
-        const text = chunk.join(" ");
+        const text = chunk.join(" "); // Standard join
         
         if (!text.trim()) return;
 
-        // Cancel previous
-        window.speechSynthesis.cancel();
-
         const utterance = new SpeechSynthesisUtterance(text);
+        if (voiceRef.current) utterance.voice = voiceRef.current;
         
-        // Rate: 1.0 is ~150-160 WPM depending on voice/browser
-        // Clamp rate between 0.1 and 10 (browser limits)
-        // Practical limit for understandability is usually ~4.0
-        const rate = Math.min(Math.max(wpm / 150, 0.1), 10);
+        // Rate mapping (experimental but standard)
+        // 1.0 rate ~ 150-160 WPM
+        const baseRate = wpm / 150; 
+        const rate = Math.min(Math.max(baseRate, 0.1), 10);
         utterance.rate = rate;
 
-        chunkOffsetRef.current = currentIndex;
+        const startOffset = currentIndex;
+        audioRangeRef.current = { start: startOffset, end: startOffset + CHUNK_SIZE };
 
         utterance.onboundary = (event) => {
-            // event.charIndex is index in 'text'
-            // We need to find which word index this corresponds to
+            // Reconstruct word index from char index
             const charIndex = event.charIndex;
-            
-            // Simple approximation: check which word includes this char index
-            // Or reconstruct fast
-            // Faster: split text up to charIndex by space to count words
-            // Note: this assumes single spaces
+            // Count spaces before charIndex to estimate word count
+            // Note: This relies on single space join. Punctuation might affect it slightly but robust enough.
             const wordsSoFar = text.slice(0, charIndex + 1).trim().split(/\s+/).length - 1;
-            
-            const nextIndex = chunkOffsetRef.current + wordsSoFar;
+            const nextIndex = startOffset + wordsSoFar;
 
-            if (nextIndex !== currentIndex && nextIndex < content.length) {
-                isEngineUpdating.current = true;
+            if (nextIndex < content.length) {
+                // We use the function form of setState to avoid stale closures if possible,
+                // BUT we are in an event handler. store.getState() access might be safer if outside component?
+                // interacting with store hook directly is fine.
+                // We update the store. The store update triggers re-render.
+                // The re-render triggers this effect.
+                // The effect sees we are in range -> Returns Early! -> No Loop!
                 setCurrentIndex(nextIndex);
             }
         };
 
         utterance.onend = () => {
-            // When chunk ends, if we are still playing and haven't finished book
-            // Trigger next chunk
-            // The natural flow is: onend -> nothing?
-            // Wait, if audio ends, we must trigger next chunk.
-            // Current index should be at end of chunk approx
-            // We just ensure we move to exactly chunk end if not there
-            const nextChunkStart = chunkOffsetRef.current + CHUNK_SIZE;
+            // When chunk ends, if we are still playing, move to next chunk
+            const nextChunkStart = startOffset + CHUNK_SIZE;
             if (isPlaying && nextChunkStart < content.length) {
-                 isEngineUpdating.current = true; // Prevent flicker
+                 // We push the index forward. This changes state -> Effect runs.
+                 // Effect sees currentIndex (new) is >= audioRangeRef.current.end (old).
+                 // So it fails the "Range Check" and RESTARTS speech. Correct!
                  setCurrentIndex(nextChunkStart); 
-                 // Updating state will re-trigger useEffect -> next chunk
-            } else if (nextChunkStart >= content.length) {
-                // End of book logic handled by separate effect
             }
         };
 
         utterance.onerror = (e) => {
             console.error("TTS Error", e);
-            // Fallback?
+            audioRangeRef.current = null;
         };
 
         window.speechSynthesis.speak(utterance);
@@ -123,6 +140,7 @@ export const useRSVP = () => {
     // TIMER MODE (Standard)
     else {
         window.speechSynthesis.cancel();
+        audioRangeRef.current = null;
         
         const baseInterval = 60000 / wpm;
         const currentWord = content[currentIndex] || '';
@@ -135,8 +153,8 @@ export const useRSVP = () => {
 
     return () => {
         if (timerRef.current) clearTimeout(timerRef.current);
-        // Only cancel speech on unmount or if mode changes drastically
-        // We rely on the start of the effect to cancel previous speech
+        // We do NOT cancel speech on cleanup to allow "state update" re-renders to persist audio
+        // But if dependencies change (isPlaying, wpm), we DO cancel at start of next run.
     };
   }, [isPlaying, wpm, content, currentIndex, setCurrentIndex, isAudioEnabled]);
 
