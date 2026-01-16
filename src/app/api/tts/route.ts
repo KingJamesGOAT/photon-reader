@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         });
 
         const chunks: Uint8Array[] = [];
-        // @ts-ignore - Readable streams are async iterable in modern Node, but TS might complain depending on types
+        // @ts-expect-error - Readable streams are async iterable in modern Node, but TS might complain depending on types
         for await (const chunk of readable) {
             chunks.push(chunk);
         }
@@ -62,8 +62,9 @@ export async function POST(req: Request) {
             alignment: null // Todo: Implement true metadata parsing
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("TTS API Error:", error);
-        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

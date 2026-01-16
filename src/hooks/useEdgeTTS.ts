@@ -1,17 +1,20 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
-interface EdgeTTSState {
+export interface EdgeTTSState {
     audioUrl: string | null;
     isLoading: boolean;
     error: string | null;
     play: () => void;
     pause: () => void;
     stop: () => void;
+    seek: (time: number) => void;
+    fetchAudio: (text: string, rate?: number) => Promise<void>;
+    audioElement: HTMLAudioElement | null;
     currentTime: number;
     duration: number;
 }
 
-export const useEdgeTTS = () => {
+export const useEdgeTTS = (): EdgeTTSState => {
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -42,7 +45,7 @@ export const useEdgeTTS = () => {
         };
     }, []);
 
-    const fetchAudio = async (text: string, rate: number = 0) => {
+    const fetchAudio = useCallback(async (text: string, rate: number = 0) => {
         if (!text.trim()) return;
 
         setIsLoading(true);
@@ -68,27 +71,28 @@ export const useEdgeTTS = () => {
                     audioRef.current.load();
                 }
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+            setError(errorMessage);
             console.error(err);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const play = () => audioRef.current?.play();
-    const pause = () => audioRef.current?.pause();
-    const stop = () => {
+    const play = useCallback(() => audioRef.current?.play(), []);
+    const pause = useCallback(() => audioRef.current?.pause(), []);
+    const stop = useCallback(() => {
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
         }
-    };
+    }, []);
     
     // Seek
-    const seek = (time: number) => {
+    const seek = useCallback((time: number) => {
         if (audioRef.current) audioRef.current.currentTime = time;
-    };
+    }, []);
 
     return {
         fetchAudio,

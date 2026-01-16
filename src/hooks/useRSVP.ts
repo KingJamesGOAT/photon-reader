@@ -132,7 +132,7 @@ export const useRSVP = () => {
           if (timerRef.current) clearTimeout(timerRef.current);
           stop();
       };
-  }, []);
+  }, [stop]);
 
   return {
     progress: content.length > 0 ? (currentIndex / content.length) * 100 : 0,
