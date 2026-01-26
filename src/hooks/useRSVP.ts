@@ -15,7 +15,7 @@ export const useRSVP = (isDriver: boolean = true) => {
   const currentFileId = useStore(state => state.currentFileId); // Needed to detect file switch
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const { fetchAudio, play, pause, stop, currentTime, duration, isLoading, audioUrl, marks, audioElement, isBlocked } = useEdgeTTS();
+  const { fetchAudio, play, pause, stop, currentTime, duration, isLoading, audioUrl, marks, audioElement, isBlocked, reset, setRate } = useEdgeTTS();
   
   const audioStartedRef = useRef(false);
   const audioOffsetRef = useRef(0); 
@@ -23,15 +23,22 @@ export const useRSVP = (isDriver: boolean = true) => {
   // RESET LOGIC: When file/content changes, force reset audio state
   useEffect(() => {
       if (!isDriver) return;
-      // When content changes (new file loaded), we must reset the "Started" flag
-      // so the Fetch Logic knows to generate NEW audio for the new text.
       audioStartedRef.current = false;
-      audioOffsetRef.current = currentIndex; // Reset anchor to current position (usually 0)
-      
-      // Also stop any currently playing audio to prevent "Echo/Ghosting" of old track
-      stop();
-  }, [currentFileId, content, stop, isDriver]); // Dependency on ID ensures reset on file switch 
+      audioOffsetRef.current = currentIndex; 
+      // Force plain reset to clear stale audio source
+      reset(); 
+  }, [currentFileId, content, reset, isDriver]); 
 
+  // RATE SYNC LOGIC: Real-time speed adjustment
+  useEffect(() => {
+      if (isAudioEnabled) {
+          // Base speed ~150-160 WPM. 
+          const playbackRate = wpm / 150; 
+          setRate(playbackRate);
+      }
+  }, [wpm, isAudioEnabled, setRate]);
+
+  // 1. AUDIO FETCHING LOGIC
   useEffect(() => {
     if (!isDriver) return;
     if (!isPlaying || currentIndex >= content.length) return;
@@ -40,11 +47,11 @@ export const useRSVP = (isDriver: boolean = true) => {
         if (!audioStartedRef.current && !isLoading) {
             audioOffsetRef.current = currentIndex;
             const text = content.slice(currentIndex, currentIndex + CHUNK_SIZE).join(" ");
-            const ratePercent = ((wpm / 150) - 1) * 100;
             
             console.log(`[RSVP] Fetching audio chunk starting at index ${currentIndex}`);
             
-            fetchAudio(text, ratePercent).then((success) => {
+            // Fetch NEUTRAL audio (no rate param)
+            fetchAudio(text).then((success) => {
                 if (success) {
                     audioStartedRef.current = true;
                     play(); 
@@ -58,7 +65,7 @@ export const useRSVP = (isDriver: boolean = true) => {
             play();
         }
     }
-  }, [isDriver, isPlaying, currentIndex, isAudioEnabled, isLoading, content, wpm, fetchAudio, play, audioElement]);
+  }, [isDriver, isPlaying, currentIndex, isAudioEnabled, isLoading, content, fetchAudio, play, audioElement]);
 
 
   useEffect(() => {

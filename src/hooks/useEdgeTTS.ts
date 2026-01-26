@@ -18,7 +18,9 @@ export interface EdgeTTSState {
     pause: () => void;
     stop: () => void;
     seek: (time: number) => void;
-    fetchAudio: (text: string, rate?: number) => Promise<boolean>;
+    fetchAudio: (text: string) => Promise<boolean>;
+    reset: () => void;
+    setRate: (rate: number) => void;
     audioElement: HTMLAudioElement | null;
     currentTime: number;
     duration: number;
@@ -60,8 +62,26 @@ export const useEdgeTTS = (): EdgeTTSState => {
         }
     }, []);
 
-    const fetchAudio = useCallback(async (text: string, rate: number = 0) => {
+    // New: Explicit Reset to clear stale audio
+    const reset = useCallback(() => {
+        setAudioUrl(null);
+        setMarks([]);
+        setError(null);
+        setIsLoading(false);
+        if (audioRef.current) {
+             audioRef.current.pause();
+             audioRef.current.removeAttribute('src'); // Helper
+             audioRef.current.src = "";
+             audioRef.current.load();
+        }
+    }, []);
+
+    // Modified: No 'rate' param needed for fetch
+    const fetchAudio = useCallback(async (text: string) => {
         if (!text.trim()) return false;
+
+        // Reset before fetching new
+        reset(); 
 
         setIsLoading(true);
         setError(null);
@@ -73,10 +93,7 @@ export const useEdgeTTS = (): EdgeTTSState => {
             const response = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    text, 
-                    rate: Math.max(Math.min(rate, 100), -50)
-                }),
+                body: JSON.stringify({ text }), // No rate
                 signal: controller.signal
             });
 
@@ -114,7 +131,7 @@ export const useEdgeTTS = (): EdgeTTSState => {
             let errorMessage = 'An unexpected error occurred';
             if (err instanceof Error) {
                 if (err.name === 'AbortError') {
-                    errorMessage = 'TTS Network Timeout (25s). Switching to manual mode.';
+                    errorMessage = 'TTS Timeout';
                 } else {
                     errorMessage = err.message;
                 }
@@ -124,14 +141,14 @@ export const useEdgeTTS = (): EdgeTTSState => {
             
             setError(errorMessage);
             console.error("TTS Critical Failure:", errorMessage);
-            console.warn("Disabling audio due to error.");
+            // console.warn("Disabling audio due to error."); // Removed this line as per instruction
             return false;
         } finally {
             clearTimeout(timeoutId);
             setIsLoading(false);
         }
         return true;
-    }, []);
+    }, [reset]);
 
     const play = useCallback(() => {
         if (audioRef.current) {
@@ -151,9 +168,17 @@ export const useEdgeTTS = (): EdgeTTSState => {
     const seek = useCallback((time: number) => {
         if (audioRef.current) audioRef.current.currentTime = time;
     }, []);
+    
+    // New: Control Playback Rate (Speed)
+    const setRate = useCallback((rate: number) => {
+        if (audioRef.current) {
+            // Clamp between 0.5 and 2.0 (browsers vary, but safe range)
+            audioRef.current.playbackRate = Math.max(0.5, Math.min(rate, 2.5));
+        }
+    }, []);
 
     return {
-        fetchAudio, play, pause, stop, seek,
+        fetchAudio, play, pause, stop, seek, reset, setRate,
         audioElement: audioRef.current,
         isLoading, error, audioUrl, marks,
         currentTime, duration, isBlocked

@@ -11,25 +11,22 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
     let tempFilePath: string | null = null;
     try {
-        const { text, voice = "en-US-AndrewNeural", rate = 0 } = await req.json();
+        const { text, voice = "en-US-AndrewNeural" } = await req.json();
 
         if (!text) {
             return NextResponse.json({ error: 'Text is required' }, { status: 400 });
         }
 
-        const rateStr = rate >= 0 ? `+${Math.round(rate)}%` : `${Math.round(rate)}%`;
-
         // 1. Generate temp file path
         const fileName = `${randomUUID()}.mp3`;
         tempFilePath = path.join(os.tmpdir(), fileName);
 
-        // 2. Synthesize to file
-        const ttsWithRate = new EdgeTTS({
-            voice: voice,
-            rate: rateStr
+        // 2. Synthesize to file (Neutrel Speed)
+        const tts = new EdgeTTS({
+            voice: voice
         });
 
-        await ttsWithRate.ttsPromise(text, tempFilePath);
+        await tts.ttsPromise(text, tempFilePath);
 
         // 3. Read file
         if (!fs.existsSync(tempFilePath)) {
