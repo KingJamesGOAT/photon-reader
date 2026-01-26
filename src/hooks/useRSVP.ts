@@ -12,12 +12,25 @@ export const useRSVP = (isDriver: boolean = true) => {
   const setCurrentIndex = useStore(state => state.setCurrentIndex);
   const setIsPlaying = useStore(state => state.setIsPlaying);
   const isAudioEnabled = useStore(state => state.isAudioEnabled);
+  const currentFileId = useStore(state => state.currentFileId); // Needed to detect file switch
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { fetchAudio, play, pause, stop, currentTime, duration, isLoading, audioUrl, marks, audioElement, isBlocked } = useEdgeTTS();
   
   const audioStartedRef = useRef(false);
   const audioOffsetRef = useRef(0); 
+
+  // RESET LOGIC: When file/content changes, force reset audio state
+  useEffect(() => {
+      if (!isDriver) return;
+      // When content changes (new file loaded), we must reset the "Started" flag
+      // so the Fetch Logic knows to generate NEW audio for the new text.
+      audioStartedRef.current = false;
+      audioOffsetRef.current = currentIndex; // Reset anchor to current position (usually 0)
+      
+      // Also stop any currently playing audio to prevent "Echo/Ghosting" of old track
+      stop();
+  }, [currentFileId, content, stop, isDriver]); // Dependency on ID ensures reset on file switch 
 
   useEffect(() => {
     if (!isDriver) return;
