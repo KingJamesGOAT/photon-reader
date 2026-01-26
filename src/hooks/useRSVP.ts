@@ -6,51 +6,42 @@ const CHUNK_SIZE = 50;
 
 export const useRSVP = () => {
   const { 
-    content, 
-    wpm, 
-    isPlaying, 
-    currentIndex, 
-    setCurrentIndex, 
-    setIsPlaying,
-    isAudioEnabled
+    content, wpm, isPlaying, currentIndex, setCurrentIndex, setIsPlaying, isAudioEnabled
   } = useStore();
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const { fetchAudio, play, pause, stop, currentTime, duration, isLoading, audioUrl, audioElement, isBlocked } = useEdgeTTS();
+  
+  // Destructure 'marks' from our new hook
+  const { fetchAudio, play, pause, stop, currentTime, isLoading, audioUrl, marks, audioElement, isBlocked } = useEdgeTTS();
+  
   const audioStartedRef = useRef(false);
-  const audioOffsetRef = useRef(0);
+  const audioOffsetRef = useRef(0); // Where the current chunk starts in the full text
 
-  const getDelayForWord = (word: string, baseInterval: number) => {
-    let multiplier = 1.0;
-    if (/[.?!:]/.test(word)) multiplier = 1.5;
-    else if (/[,;—\-]/.test(word)) multiplier = 1.2;
-    if (word.length > 10) multiplier *= 1.1;
-    return baseInterval * multiplier;
-  };
-
-  // Sync Visuals to Audio Time (The Karaoke Pattern)
+  // --------------------------------------------------------
+  // SYNC LOGIC: Map Audio Time -> Word Index
+  // --------------------------------------------------------
   useEffect(() => {
-    if (isAudioEnabled && isPlaying && audioUrl && !isLoading) {
-        // Only run sync if we have a valid duration > 0
-        if (duration > 0 && audioElement && !audioElement.paused) {
-             const remainingText = content.slice(audioOffsetRef.current, audioOffsetRef.current + CHUNK_SIZE);
-             const wordCount = remainingText.length;
-             const wordsPerSecond = wordCount / duration;
-             
-             // currentTime is time within the CHUNK
-             const relativeIndex = Math.floor(currentTime * wordsPerSecond);
-             const nextIndex = audioOffsetRef.current + relativeIndex;
-             
-             // Ensure valid numbers before updating state
-             if (!isNaN(nextIndex) && nextIndex !== currentIndex && nextIndex < content.length && relativeIndex < wordCount) {
-                 setCurrentIndex(nextIndex);
-             }
+    if (isAudioEnabled && isPlaying && marks.length > 0) {
+        // Find the word that corresponds to the current audio time
+        // We look for a mark where: start <= currentTime < end
+        // Note: The 'marks' array corresponds to the *chunk* text, not the whole book.
+        const activeMarkIndex = marks.findIndex(m => currentTime >= m.start && currentTime < m.end);
+
+        if (activeMarkIndex !== -1) {
+            // The absolute index is the chunk start + the index within the chunk
+            const absoluteIndex = audioOffsetRef.current + activeMarkIndex;
+            
+            if (absoluteIndex !== currentIndex && absoluteIndex < content.length) {
+                setCurrentIndex(absoluteIndex);
+            }
         }
     }
-  }, [currentTime, duration, isAudioEnabled, isPlaying, audioUrl, content, audioOffsetRef, currentIndex, setCurrentIndex, audioElement, isLoading]);
+  }, [currentTime, marks, isAudioEnabled, isPlaying, audioOffsetRef, currentIndex, setCurrentIndex]);
 
 
-  // Main Control Loop
+  // --------------------------------------------------------
+  // MAIN CONTROL LOOP
+  // --------------------------------------------------------
   useEffect(() => {
     if (!isPlaying) {
         if (timerRef.current) clearTimeout(timerRef.current);
@@ -64,30 +55,23 @@ export const useRSVP = () => {
     if (isAudioEnabled) {
         if (timerRef.current) clearTimeout(timerRef.current);
         
-        // If we have audio and are just paused, resume
+        // RESUME
         if (audioUrl && !audioStartedRef.current) {
              play();
              audioStartedRef.current = true;
              return;
         }
 
-        // If we need new audio (seeked or fresh start or next chunk)
+        // FETCH NEW CHUNK
         if (!audioStartedRef.current && !isLoading) {
             audioOffsetRef.current = currentIndex;
-            
             const text = content.slice(currentIndex, currentIndex + CHUNK_SIZE).join(" ");
-            
-            // Edge TTS: 0% = default. +100% = 2x.
-            // Default is usually ~150 WPM.
-            const ratePercent = ((wpm / 150) - 1) * 100;
+            const ratePercent = ((wpm / 150) - 1) * 100; // Calibrate 150 as base WPM
             
             fetchAudio(text, ratePercent).then((success) => {
                 if (success) {
                     audioStartedRef.current = true;
-                    // Try to play; if blocked, the logs in useEdgeTTS will show it.
-                    play(); 
-                } else {
-                    console.error("RSVP: Audio fetch failed");
+                    play();
                 }
             });
         }
@@ -96,14 +80,17 @@ export const useRSVP = () => {
         }
 
     } 
-    // TIMER MODE
+    // TIMER MODE (Fallback)
     else {
-        if (audioUrl) pause(); 
+        if (audioUrl) pause();
 
         const baseInterval = 60000 / wpm;
         const currentWord = content[currentIndex] || '';
-        const delay = getDelayForWord(currentWord, baseInterval);
-        
+        // Simple delay logic for timer mode
+        let delay = baseInterval;
+        if (/[.?!]/.test(currentWord)) delay *= 1.5;
+        else if (currentWord.length > 10) delay *= 1.1;
+
         timerRef.current = setTimeout(() => {
             setCurrentIndex(currentIndex + 1);
         }, delay);
@@ -114,54 +101,24 @@ export const useRSVP = () => {
     };
   }, [isPlaying, wpm, content, currentIndex, isAudioEnabled, audioUrl, isLoading, fetchAudio, play, pause, audioElement, setCurrentIndex]);
 
-  // Handle Audio End (Next Chunk)
+  // Handle End of Audio Chunk
   useEffect(() => {
       const handleEnded = () => {
           if (!isPlaying) return;
-          
           const nextChunkStart = audioOffsetRef.current + CHUNK_SIZE;
           if (nextChunkStart < content.length) {
-              console.log("RSVP: Chunk ended, advancing to", nextChunkStart);
               setCurrentIndex(nextChunkStart);
-              audioStartedRef.current = false; // Trigger new fetch
+              audioStartedRef.current = false; // Triggers new fetch
           } else {
-              console.log("RSVP: Finished all content");
               setIsPlaying(false);
-              audioStartedRef.current = false;
               stop();
               setCurrentIndex(0);
           }
       };
 
-      if (audioElement) {
-          audioElement.addEventListener('ended', handleEnded);
-      }
-      return () => {
-          if (audioElement) {
-              audioElement.removeEventListener('ended', handleEnded);
-          }
-      };
+      if (audioElement) audioElement.addEventListener('ended', handleEnded);
+      return () => audioElement?.removeEventListener('ended', handleEnded);
   }, [audioElement, content.length, isPlaying, setIsPlaying, setCurrentIndex, stop]);
-
-  // Handle Seek (Invalidate current chunk)
-  useEffect(() => {
-      if (audioStartedRef.current && isPlaying) {
-          const chunkEnd = audioOffsetRef.current + CHUNK_SIZE;
-          if (currentIndex < audioOffsetRef.current || currentIndex >= chunkEnd) {
-             console.log("RSVP: Seek detected outside chunk, resetting audio");
-             audioStartedRef.current = false;
-             stop();
-          }
-      }
-  }, [currentIndex, isPlaying, stop]);
-
-  // Cleanup
-  useEffect(() => {
-      return () => {
-          if (timerRef.current) clearTimeout(timerRef.current);
-          stop();
-      };
-  }, [stop]);
 
   return {
     progress: content.length > 0 ? (currentIndex / content.length) * 100 : 0,
