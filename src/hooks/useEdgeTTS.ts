@@ -54,7 +54,7 @@ export const useEdgeTTS = (): EdgeTTSState => {
         setError(null);
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout (Vercel Cold Starts)
 
         try {
             const response = await fetch('/api/tts', {
@@ -101,7 +101,7 @@ export const useEdgeTTS = (): EdgeTTSState => {
             let errorMessage = 'An unexpected error occurred';
             if (err instanceof Error) {
                 if (err.name === 'AbortError') {
-                    errorMessage = 'TTS Network Timeout (8s). Switching to manual mode.';
+                    errorMessage = 'TTS Network Timeout (25s). Switching to manual mode.';
                 } else {
                     errorMessage = err.message;
                 }

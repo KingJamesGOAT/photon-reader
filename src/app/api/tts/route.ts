@@ -5,6 +5,9 @@ import * as path from 'path';
 import * as os from 'os';
 import { randomUUID } from 'crypto';
 
+export const maxDuration = 30; // Attempt to increase Vercel timeout
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
     let tempFilePath: string | null = null;
     try {
