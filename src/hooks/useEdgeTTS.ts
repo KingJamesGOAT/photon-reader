@@ -29,12 +29,23 @@ export const useEdgeTTS = (): EdgeTTSState => {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             audioRef.current = new Audio();
+            
             audioRef.current.ontimeupdate = () => {
                 setCurrentTime(audioRef.current?.currentTime || 0);
             };
+            
             audioRef.current.onloadedmetadata = () => {
-                setDuration(audioRef.current?.duration || 0);
+                const dur = audioRef.current?.duration || 0;
+                console.log("EdgeTTS: Metadata loaded. Duration:", dur);
+                // Avoid Infinity if metadata is weird
+                setDuration(Number.isFinite(dur) ? dur : 0);
             };
+
+            audioRef.current.onerror = (e) => {
+                console.error("EdgeTTS: Audio Element Error", e, audioRef.current?.error);
+                setError("Audio playback failed to load.");
+            };
+
             audioRef.current.onended = () => {
                 // handle end
             };
@@ -58,7 +69,7 @@ export const useEdgeTTS = (): EdgeTTSState => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     text, 
-                    rate: Math.max(Math.min(rate, 100), -50) // Clamp rate roughly
+                    rate: Math.max(Math.min(rate, 100), -50)
                 })
             });
 
@@ -66,16 +77,19 @@ export const useEdgeTTS = (): EdgeTTSState => {
             if (data.error) throw new Error(data.error);
 
             if (data.audio) {
-                // Convert Base64 to Blob
                 const binaryString = window.atob(data.audio);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
-                const blob = new Blob([bytes], { type: 'audio/mp3' });
+                
+                // FIX: Use correct MIME type for MP3
+                const blob = new Blob([bytes], { type: 'audio/mpeg' });
                 const url = URL.createObjectURL(blob);
 
+                console.log("EdgeTTS: Audio URL created", url);
                 setAudioUrl(url);
+                
                 if (audioRef.current) {
                     audioRef.current.src = url;
                     audioRef.current.load();
@@ -93,18 +107,15 @@ export const useEdgeTTS = (): EdgeTTSState => {
     }, []);
 
     const play = useCallback(() => {
-        console.log("EdgeTTS: play called", audioRef.current);
         if (audioRef.current) {
              const promise = audioRef.current.play();
              if (promise !== undefined) {
                  promise.catch(error => {
-                     console.error("EdgeTTS: play error", error);
+                     console.error("EdgeTTS: Play blocked or failed", error);
                      if (error.name === 'NotAllowedError') {
                          setIsBlocked(true);
                      }
                  });
-                 // If promise doesn't reject immediately, we might be good.
-                 // But we can reset blocked state if it resolves?
                  promise.then(() => {
                      setIsBlocked(false);
                  });
@@ -113,19 +124,16 @@ export const useEdgeTTS = (): EdgeTTSState => {
     }, []);
 
     const pause = useCallback(() => {
-        console.log("EdgeTTS: pause called");
         audioRef.current?.pause();
     }, []);
 
     const stop = useCallback(() => {
-        console.log("EdgeTTS: stop called");
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
         }
     }, []);
     
-    // Seek
     const seek = useCallback((time: number) => {
         if (audioRef.current) audioRef.current.currentTime = time;
     }, []);
