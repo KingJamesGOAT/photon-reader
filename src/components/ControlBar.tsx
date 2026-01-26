@@ -7,7 +7,8 @@ export const ControlBar = () => {
   const { isPlaying, wpm, setWpm, currentFileId, reset, setIsFullScreen, isFullScreen, feedback, isAudioEnabled, toggleAudio } = useStore();
   const { progress } = useRSVP();
   
-  const showControls = currentFileId && currentFileId !== 'demo';
+  // Show controls for demo file too, so users can test audio
+  const showControls = !!currentFileId;
 
   const handleSeek = (seconds: number) => {
       useStore.getState().seekByTime(seconds);
