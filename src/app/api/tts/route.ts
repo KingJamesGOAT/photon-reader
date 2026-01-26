@@ -43,7 +43,16 @@ export async function POST(req: Request) {
 
     } catch (error: unknown) {
         console.error("TTS API Error:", error);
-        const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
+        
+        let errorMessage = 'Internal Server Error';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        } else if (typeof error === 'object' && error !== null) {
+            errorMessage = JSON.stringify(error);
+        }
+
         return NextResponse.json({ error: errorMessage }, { status: 500 });
     } finally {
         // 5. Cleanup

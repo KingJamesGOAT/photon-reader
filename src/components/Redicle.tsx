@@ -4,7 +4,7 @@ import { clsx } from 'clsx';
 import { useStore } from '@/store/useStore';
 
 export const Redicle = () => {
-  const { isBlocked, playAudio } = useRSVP();
+  const { isBlocked, playAudio, isLoading } = useRSVP();
   const { content, currentIndex, wpm } = useStore();
 
   const currentWord = content[currentIndex] || '';
@@ -51,6 +51,16 @@ export const Redicle = () => {
             >
                 <div className="bg-primary text-primary-foreground px-6 py-3 rounded-full font-semibold shadow-lg animate-pulse">
                     Tap to Enable Audio
+                </div>
+            </div>
+        )}
+
+        {/* Loading Overlay */}
+        {isLoading && !isBlocked && (
+             <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/50 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm font-medium text-muted-foreground animate-pulse">Loading Audio...</span>
                 </div>
             </div>
         )}
