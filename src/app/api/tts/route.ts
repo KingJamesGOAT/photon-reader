@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
-import { Communicate } from 'edge-tts-universal';
+import { EdgeTTS } from 'edge-tts-universal';
+
+interface Subtitle {
+    offset: number;
+    duration: number;
+    text: string;
+}
 
 export async function POST(req: Request) {
     try {
@@ -9,41 +15,33 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Text is required' }, { status: 400 });
         }
 
-        // Create the TTS communication instance
         // Rate format: "+0%", "-10%", etc.
         const rateStr = rate >= 0 ? `+${Math.round(rate)}%` : `${Math.round(rate)}%`;
-        const communicate = new Communicate(text, { 
-            voice, 
-            rate: rateStr 
+
+        // Create the TTS instance with (text, voice, options)
+        const tts = new EdgeTTS(text, voice, {
+            rate: rateStr
         });
 
-        const audioChunks: Buffer[] = [];
-        const marks: { word: string; start: number; end: number }[] = [];
+        // Synthesize the audio
+        const result = await tts.synthesize();
 
-        // Stream the response and separate Audio from Metadata
-        for await (const chunk of communicate.stream()) {
-            if (chunk.type === 'audio' && chunk.data) {
-                // Collect audio bytes
-                audioChunks.push(Buffer.from(chunk.data));
-            } else if (chunk.type === 'WordBoundary') {
-                // Collect synchronization data
-                // chunk contains: { offset: number (ns), duration: number (ns), text: string }
-                // Convert nanoseconds to seconds for easier frontend use
-                marks.push({
-                    word: chunk.text || "",
-                    start: (chunk.offset ?? 0) / 10_000_000, // 100ns units to seconds
-                    end: ((chunk.offset ?? 0) + (chunk.duration ?? 0)) / 10_000_000
-                });
-            }
-        }
+        // Map subtitles to marks
+        // Subtitles come as: { offset: number (ns), duration: number (ns), text: string }
+        const marks = (result.subtitle || []).map((sub: Subtitle) => ({
+            word: sub.text,
+            start: sub.offset / 10_000_000, // Convert 100ns units to seconds
+            end: (sub.offset + sub.duration) / 10_000_000
+        }));
 
-        // Combine all audio chunks
-        const audioBuffer = Buffer.concat(audioChunks);
+        // result.audio is a Blob, convert to Buffer/Base64
+        const arrayBuffer = await result.audio.arrayBuffer();
+        const audioBuffer = Buffer.from(arrayBuffer);
         const audioBase64 = audioBuffer.toString('base64');
 
         return NextResponse.json({ 
             audio: audioBase64,
-            marks: marks // <--- The magic data you were missing
+            marks: marks
         });
 
     } catch (error: unknown) {

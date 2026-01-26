@@ -23,9 +23,17 @@ export const useRSVP = () => {
   useEffect(() => {
     if (isAudioEnabled && isPlaying && marks.length > 0) {
         // Find the word that corresponds to the current audio time
-        // We look for a mark where: start <= currentTime < end
-        // Note: The 'marks' array corresponds to the *chunk* text, not the whole book.
-        const activeMarkIndex = marks.findIndex(m => currentTime >= m.start && currentTime < m.end);
+        // We look for the *last* mark where start <= currentTime
+        // "Sticky" loop: Iterate and update index as long as condition is met
+        let activeMarkIndex = -1;
+        for (let i = 0; i < marks.length; i++) {
+            if (currentTime >= marks[i].start) {
+                activeMarkIndex = i;
+            } else {
+                // Since marks are chronological, we can stop once we pass the current time
+                break;
+            }
+        }
 
         if (activeMarkIndex !== -1) {
             // The absolute index is the chunk start + the index within the chunk
