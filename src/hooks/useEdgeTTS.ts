@@ -52,6 +52,10 @@ export const useEdgeTTS = (): EdgeTTSState => {
 
         setIsLoading(true);
         setError(null);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
         try {
             const response = await fetch('/api/tts', {
                 method: 'POST',
@@ -59,8 +63,14 @@ export const useEdgeTTS = (): EdgeTTSState => {
                 body: JSON.stringify({ 
                     text, 
                     rate: Math.max(Math.min(rate, 100), -50)
-                })
+                }),
+                signal: controller.signal
             });
+
+            if (!response.ok) {
+                 const errorText = await response.text();
+                 throw new Error(`Server returned ${response.status}: ${errorText}`);
+            }
 
             const data = await response.json();
             if (data.error) throw new Error(data.error);
@@ -75,7 +85,12 @@ export const useEdgeTTS = (): EdgeTTSState => {
                 const url = URL.createObjectURL(blob);
 
                 setAudioUrl(url);
-                if (data.marks) setMarks(data.marks); // Store the timestamps
+                if (data.marks) {
+                    setMarks(data.marks);
+                } else {
+                    console.warn("TTS: Audio received but no marks found.");
+                    setMarks([]); // Ensure it's empty, not undefined
+                }
 
                 if (audioRef.current) {
                     audioRef.current.src = url;
@@ -85,14 +100,21 @@ export const useEdgeTTS = (): EdgeTTSState => {
         } catch (err: unknown) {
             let errorMessage = 'An unexpected error occurred';
             if (err instanceof Error) {
-                errorMessage = err.message;
+                if (err.name === 'AbortError') {
+                    errorMessage = 'TTS Network Timeout (8s). Switching to manual mode.';
+                } else {
+                    errorMessage = err.message;
+                }
             } else if (typeof err === 'string') {
                 errorMessage = err;
             }
+            
             setError(errorMessage);
-            console.error("TTS Error:", errorMessage);
+            console.error("TTS Critical Failure:", errorMessage);
+            console.warn("Disabling audio due to error.");
             return false;
         } finally {
+            clearTimeout(timeoutId);
             setIsLoading(false);
         }
         return true;
