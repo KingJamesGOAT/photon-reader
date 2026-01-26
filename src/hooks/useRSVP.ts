@@ -48,15 +48,13 @@ export const useRSVP = () => {
             fetchAudio(text, ratePercent).then((success) => {
                 if (success) {
                     audioStartedRef.current = true;
-                    const playPromise = play(); // Try to play
-                    
-                    // Fail-Safe: If play() doesn't result in movement within 3s, something is wrong
-                    // (But play() is void in our hook, so we rely on audioStartedRef and events)
+                    // Try to play - logic handled by audioStartedRef check
+                    play(); 
                 } else {
-                    console.warn("[RSVP] Audio fetch failed. Falling back to timer for this chunk.");
-                    // Fallback to timer immediately if fetch returned false (timeout/error)
-                    // We can temporarily disable audio or just force a timer tick
-                    // For robustness: let the "Fail-Safe Timer" (below) handle the tick
+                    console.warn("[RSVP] Audio fetch failed. Disabling audio mode.");
+                    // CRITICAL FIX: Explicitly disable audio to prevent infinite retry loop
+                    // We must access the store's toggle mechanism or setter
+                    useStore.getState().toggleAudio();
                 }
             });
         }
