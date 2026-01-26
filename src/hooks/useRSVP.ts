@@ -4,7 +4,7 @@ import { useEdgeTTS } from './useEdgeTTS';
 
 const CHUNK_SIZE = 50;
 
-export const useRSVP = () => {
+export const useRSVP = (isDriver: boolean = true) => {
   const { 
     content, wpm, isPlaying, currentIndex, setCurrentIndex, setIsPlaying, isAudioEnabled
   } = useStore();
@@ -12,6 +12,10 @@ export const useRSVP = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Destructure 'marks' from our new hook
+  // IMPORTANT: useEdgeTTS has its own internal state. 
+  // If isDriver is false, we technically don't need audio state, but we return 'progress' which relies on currentIndex.
+  // We can just call useEdgeTTS() anyway, but its logic (audio listeners) are low cost.
+  // The crucial part is NOT calling 'play', 'pause', 'fetchAudio' from the non-driver instance.
   const { fetchAudio, play, pause, stop, currentTime, duration, isLoading, audioUrl, marks, audioElement, isBlocked } = useEdgeTTS();
   
   const audioStartedRef = useRef(false);
@@ -26,6 +30,9 @@ export const useRSVP = () => {
   // HYBRID SYNC: Audio + Interpolation + Fallback Timer
   // --------------------------------------------------------
   useEffect(() => {
+    // PASSIVE MODE: Do nothing if not the driver
+    if (!isDriver) return;
+
     // 1. If not playing, or at end, do nothing
     if (!isPlaying || currentIndex >= content.length) {
         if (timerRef.current) clearTimeout(timerRef.current);
@@ -135,7 +142,7 @@ export const useRSVP = () => {
     return () => {
         if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isPlaying, wpm, content, currentIndex, isAudioEnabled, audioUrl, isLoading, fetchAudio, play, pause, audioElement, setCurrentIndex, marks, currentTime, duration]);
+  }, [isDriver, isPlaying, wpm, content, currentIndex, isAudioEnabled, audioUrl, isLoading, fetchAudio, play, pause, audioElement, setCurrentIndex, marks, currentTime, duration]);
 
   // Handle End of Audio Chunk
   useEffect(() => {

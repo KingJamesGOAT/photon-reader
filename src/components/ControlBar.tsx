@@ -5,7 +5,7 @@ import { Play, Pause, RotateCcw, RotateCw, Maximize, Volume2, VolumeX } from "lu
 
 export const ControlBar = () => {
   const { isPlaying, wpm, setWpm, currentFileId, reset, setIsFullScreen, isFullScreen, feedback, isAudioEnabled, toggleAudio } = useStore();
-  const { progress } = useRSVP();
+  const { progress } = useRSVP(false); // Passive mode, just for progress
   
   // Show controls for demo file too, so users can test audio
   const showControls = !!currentFileId;
