@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useStore } from '@/store/useStore';
+
+// ... (imports)
 
 export interface WordMark {
     word: string;
@@ -8,7 +11,7 @@ export interface WordMark {
 
 export interface EdgeTTSState {
     audioUrl: string | null;
-    marks: WordMark[]; // New state for timestamps
+    marks: WordMark[];
     isLoading: boolean;
     error: string | null;
     play: () => void;
@@ -31,20 +34,30 @@ export const useEdgeTTS = (): EdgeTTSState => {
     const [duration, setDuration] = useState(0);
     const [isBlocked, setIsBlocked] = useState(false);
     
+    // Use Singleton Audio from Store
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            audioRef.current = new Audio();
-            audioRef.current.ontimeupdate = () => setCurrentTime(audioRef.current?.currentTime || 0);
-            audioRef.current.onloadedmetadata = () => setDuration(audioRef.current?.duration || 0);
-        }
-        return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.src = "";
+            // Get Singleton
+            const el = useStore.getState().getAudioElement();
+            if (el) {
+                audioRef.current = el;
+                
+                // Add Listeners
+                const updateTime = () => setCurrentTime(el.currentTime || 0);
+                const updateDuration = () => setDuration(el.duration || 0);
+
+                el.addEventListener('timeupdate', updateTime);
+                el.addEventListener('loadedmetadata', updateDuration);
+
+                // Cleanup listeners only (DO NOT PAUSE/DESTROY GLOBAL AUDIO)
+                return () => {
+                    el.removeEventListener('timeupdate', updateTime);
+                    el.removeEventListener('loadedmetadata', updateDuration);
+                }
             }
-        };
+        }
     }, []);
 
     const fetchAudio = useCallback(async (text: string, rate: number = 0) => {

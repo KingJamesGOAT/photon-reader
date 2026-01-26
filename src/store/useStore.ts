@@ -27,7 +27,13 @@ export interface Folder {
   createdAt: number;
 }
 
-export interface Chapter {
+export // Define types for content and chapters
+// ... (imports)
+
+// Audio Singleton (outside store to avoid serialization issues)
+let globalAudioElement: HTMLAudioElement | null = null;
+
+interface Chapter {
   title: string;
   startIndex: number;
   wordCount: number;
@@ -73,6 +79,7 @@ interface AppState {
   togglePlaySmart: () => void;
   seekByTime: (seconds: number) => void;
   toggleAudio: () => void;
+  getAudioElement: () => HTMLAudioElement | null;
 }
 
 export const useStore = create<AppState>()(
@@ -182,7 +189,21 @@ export const useStore = create<AppState>()(
         });
       },
 
-      setWpm: (wpm) => set({ wpm }),
+      getAudioElement: () => {
+         if (typeof window === 'undefined') return null;
+         if (!globalAudioElement) {
+             globalAudioElement = new Audio();
+         }
+         return globalAudioElement;
+      },
+
+      setWpm: (wpm) => {
+          const { isAudioEnabled } = get();
+          // User Request: Cap audio speed at 250 WPM
+          const limit = isAudioEnabled ? 250 : 1000; 
+          set({ wpm: Math.min(wpm, limit) });
+      },
+
       setIsPlaying: (isPlaying) => set({ isPlaying }),
 
       setCurrentIndex: (index) => {
@@ -252,7 +273,20 @@ export const useStore = create<AppState>()(
         }
       },
 
-      toggleAudio: () => set((state) => ({ isAudioEnabled: !state.isAudioEnabled })),
+      toggleAudio: () => set((state) => {
+          const nextState = !state.isAudioEnabled;
+          let nextWpm = state.wpm;
+          
+          // Clamp WPM if turning audio ON
+          if (nextState && nextWpm > 250) {
+              nextWpm = 250;
+          }
+
+          return { 
+              isAudioEnabled: nextState,
+              wpm: nextWpm 
+          };
+      }),
 
       seekByTime: (seconds) => {
         const { wpm, currentIndex, content } = get();
