@@ -27,122 +27,123 @@ export const useRSVP = (isDriver: boolean = true) => {
 
 
   // --------------------------------------------------------
-  // HYBRID SYNC: Audio + Interpolation + Fallback Timer
+  // SEPARATED LOGIC: Fetch vs Sync vs Timer
   // --------------------------------------------------------
+
+  // 1. AUDIO FETCHING LOGIC
+  // Triggers only when index changes or audio is enabled/disabled
   useEffect(() => {
-    // PASSIVE MODE: Do nothing if not the driver
     if (!isDriver) return;
+    if (!isPlaying || currentIndex >= content.length) return;
 
-    // 1. If not playing, or at end, do nothing
-    if (!isPlaying || currentIndex >= content.length) {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        if (isAudioEnabled) pause();
-        return;
-    }
-
-    // 2. AUDIO MODE LOGIC
     if (isAudioEnabled) {
-        // A. Chunk Loading / Fetching
         if (!audioStartedRef.current && !isLoading) {
-            audioOffsetRef.current = currentIndex; // Anchor point
+            audioOffsetRef.current = currentIndex;
             const text = content.slice(currentIndex, currentIndex + CHUNK_SIZE).join(" ");
-            
-            // Adjust rate: 150wpm = 0%. Range usually -50% to +100%
-            const ratePercent = ((wpm / 150) - 1) * 100; 
+            const ratePercent = ((wpm / 150) - 1) * 100;
             
             console.log(`[RSVP] Fetching audio chunk starting at index ${currentIndex}`);
             
             fetchAudio(text, ratePercent).then((success) => {
                 if (success) {
                     audioStartedRef.current = true;
-                    // Try to play - logic handled by audioStartedRef check
                     play(); 
                 } else {
                     console.warn("[RSVP] Audio fetch failed. Disabling audio mode.");
-                    // CRITICAL FIX: Explicitly disable audio to prevent infinite retry loop
-                    // We must access the store's toggle mechanism or setter
                     useStore.getState().toggleAudio();
                 }
             });
-        }
+        } 
         else if (audioStartedRef.current && audioElement?.paused && !isLoading) {
-            // Attempt to resume if paused
-             play();
+            play();
         }
+    }
+  }, [isDriver, isPlaying, currentIndex, isAudioEnabled, isLoading, content, wpm, fetchAudio, play, audioElement]);
 
-        // B. SYNC & FAIL-SAFE LOGIC
-        // Regardless of audio state, we run a "Hybrid Tick"
-        // If audio is playing fine, it drives. If it halts, the timer drives.
-        
-        if (timerRef.current) clearTimeout(timerRef.current);
 
-        // -- Strategy: Check if Audio is actually driving --
-        const isAudioActuallyPlaying = audioElement && !audioElement.paused && !audioElement.ended && audioElement.readyState > 2;
+  // 2. SYNC LOGIC (High Frequency)
+  // Triggers on 'currentTime' update. Responsible for MOVING index based on audio.
+  useEffect(() => {
+      if (!isDriver || !isPlaying || !isAudioEnabled) return;
+      
+      const isAudioActive = audioElement && !audioElement.paused && !audioElement.ended && audioElement.readyState > 2;
+      
+      if (isAudioActive) {
+          let relativeIndex = -1;
+          if (marks.length > 0) {
+              for (let i = 0; i < marks.length; i++) {
+                  if (currentTime >= marks[i].start) relativeIndex = i;
+                  else break;
+              }
+          } else if (duration > 0) {
+              const chunkWordCount = Math.min(CHUNK_SIZE, content.length - audioOffsetRef.current);
+              relativeIndex = Math.floor((currentTime / duration) * chunkWordCount);
+          }
 
-        if (isAudioActuallyPlaying) {
-             // >>> AUDIO DRIVEN <<<
-             // 1. Interpolation / Marks Logic matches current time to index
-             let relativeIndex = -1;
+          if (relativeIndex !== -1) {
+              const absoluteIndex = audioOffsetRef.current + relativeIndex;
+              // Guard: Only update if changed and valid
+              if (absoluteIndex !== currentIndex && absoluteIndex < content.length && absoluteIndex >= 0) {
+                   setCurrentIndex(absoluteIndex);
+              }
+          }
+      }
+  }, [isDriver, isPlaying, isAudioEnabled, currentTime, marks, duration, audioElement, currentIndex, content.length, setCurrentIndex]);
 
-             if (marks.length > 0) {
-                 // "Sticky" Mark Search
-                 for (let i = 0; i < marks.length; i++) {
-                     if (currentTime >= marks[i].start) {
-                         relativeIndex = i;
-                     } else { break; }
-                 }
-             } else if (duration > 0) {
-                 // Interpolation Fallback (No marks)
-                 const chunkWordCount = Math.min(CHUNK_SIZE, content.length - audioOffsetRef.current);
-                 relativeIndex = Math.floor((currentTime / duration) * chunkWordCount);
-             }
 
-             if (relativeIndex !== -1) {
-                 const absoluteIndex = audioOffsetRef.current + relativeIndex;
-                 if (absoluteIndex !== currentIndex && absoluteIndex < content.length) {
-                      setCurrentIndex(absoluteIndex);
-                 }
-             }
-        } else {
-             // >>> TIMER DRIVEN (Fail-Safe) <<<
-             // If audio is loading, blocked, or just silent, we WAIT a bit, then force move.
-             
-             // Wait longer if loading (give it a chance)
-             const isLoadingBuffer = isLoading ? 3000 : 0; 
-             // Standard delay based on WPM
-             const baseInterval = (60000 / wpm);
-             const currentWord = content[currentIndex] || '';
-             let delay = baseInterval;
-             if (/[.?!]/.test(currentWord)) delay *= 1.5;
-             else if (currentWord.length > 10) delay *= 1.1;
+  // 3. FAIL-SAFE / TIMER LOGIC
+  // Triggers on index change or loading state. Responsible for ADVANCING if audio fails/stalls.
+  useEffect(() => {
+    if (!isDriver) return;
+    
+    // Clear existing timer on any relevant change
+    if (timerRef.current) clearTimeout(timerRef.current);
 
-             // If we've been stuck for (delay + buffer), force move
-             timerRef.current = setTimeout(() => {
-                 console.log("[RSVP] Fail-Safe Timer Tick. Audio stuck or loading.");
+    if (!isPlaying || currentIndex >= content.length) {
+        if (isAudioEnabled) pause();
+        return;
+    }
+
+    const isAudioActive = audioElement && !audioElement.paused && !audioElement.ended && audioElement.readyState > 2;
+
+    // Calculate Delay
+    const baseInterval = 60000 / wpm;
+    const currentWord = content[currentIndex] || '';
+    let delay = baseInterval;
+    if (/[.?!]/.test(currentWord)) delay *= 1.5;
+    else if (currentWord.length > 10) delay *= 1.1;
+
+    // If Audio Mode is ON but Audio is NOT playing (Loading, Blocked, or Error)
+    if (isAudioEnabled && !isAudioActive) {
+         const isLoadingBuffer = isLoading ? 3000 : 0; 
+         
+         timerRef.current = setTimeout(() => {
+             console.log("[RSVP] Fail-Safe Timer Tick.");
+             // Guard: Don't advance past end
+             if (currentIndex + 1 < content.length) {
                  setCurrentIndex(currentIndex + 1);
-             }, delay + isLoadingBuffer);
-        }
-
+             } else {
+                 setIsPlaying(false);
+             }
+         }, delay + isLoadingBuffer);
     } 
-    // 3. STANDARD TIMER MODE (Audio Disabled)
-    else {
+    // If Audio Mode is OFF (Standard RSVP)
+    else if (!isAudioEnabled) {
         if (audioUrl) pause();
-
-        const baseInterval = 60000 / wpm;
-        const currentWord = content[currentIndex] || '';
-        let delay = baseInterval;
-        if (/[.?!]/.test(currentWord)) delay *= 1.5;
-        else if (currentWord.length > 10) delay *= 1.1;
-
+        
         timerRef.current = setTimeout(() => {
-            setCurrentIndex(currentIndex + 1);
+            if (currentIndex + 1 < content.length) {
+                setCurrentIndex(currentIndex + 1);
+            } else {
+                setIsPlaying(false);
+            }
         }, delay);
     }
 
     return () => {
         if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isDriver, isPlaying, wpm, content, currentIndex, isAudioEnabled, audioUrl, isLoading, fetchAudio, play, pause, audioElement, setCurrentIndex, marks, currentTime, duration]);
+  }, [isDriver, isPlaying, currentIndex, isAudioEnabled, isLoading, wpm, content, audioElement, audioUrl, setIsPlaying, setCurrentIndex, pause]);
 
   // Handle End of Audio Chunk
   useEffect(() => {
