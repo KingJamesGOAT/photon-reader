@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
         // Stream the response and separate Audio from Metadata
         for await (const chunk of communicate.stream()) {
-            if (chunk.type === 'audio') {
+            if (chunk.type === 'audio' && chunk.data) {
                 // Collect audio bytes
                 audioChunks.push(Buffer.from(chunk.data));
             } else if (chunk.type === 'WordBoundary') {
@@ -30,9 +30,9 @@ export async function POST(req: Request) {
                 // chunk contains: { offset: number (ns), duration: number (ns), text: string }
                 // Convert nanoseconds to seconds for easier frontend use
                 marks.push({
-                    word: chunk.text,
-                    start: chunk.offset / 10_000_000, // 100ns units to seconds
-                    end: (chunk.offset + chunk.duration) / 10_000_000
+                    word: chunk.text || "",
+                    start: (chunk.offset ?? 0) / 10_000_000, // 100ns units to seconds
+                    end: ((chunk.offset ?? 0) + (chunk.duration ?? 0)) / 10_000_000
                 });
             }
         }
@@ -46,8 +46,9 @@ export async function POST(req: Request) {
             marks: marks // <--- The magic data you were missing
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("TTS API Error:", error);
-        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

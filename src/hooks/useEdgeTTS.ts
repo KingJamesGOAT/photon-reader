@@ -82,9 +82,15 @@ export const useEdgeTTS = (): EdgeTTSState => {
                     audioRef.current.load();
                 }
             }
-        } catch (err: any) {
-            setError(err.message);
-            console.error("TTS Error:", err.message);
+        } catch (err: unknown) {
+            let errorMessage = 'An unexpected error occurred';
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            }
+            setError(errorMessage);
+            console.error("TTS Error:", errorMessage);
             return false;
         } finally {
             setIsLoading(false);

@@ -36,7 +36,7 @@ export const useRSVP = () => {
             }
         }
     }
-  }, [currentTime, marks, isAudioEnabled, isPlaying, audioOffsetRef, currentIndex, setCurrentIndex]);
+  }, [currentTime, marks, isAudioEnabled, isPlaying, audioOffsetRef, currentIndex, setCurrentIndex, content.length]);
 
 
   // --------------------------------------------------------
