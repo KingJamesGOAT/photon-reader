@@ -33,7 +33,7 @@ export // Define types for content and chapters
 // Audio Singleton (outside store to avoid serialization issues)
 let globalAudioElement: HTMLAudioElement | null = null;
 
-interface Chapter {
+export interface Chapter {
   title: string;
   startIndex: number;
   wordCount: number;
