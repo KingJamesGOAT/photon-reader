@@ -36,14 +36,16 @@ export async function POST(req: Request) {
         // OR better: switch to `edge-tts-universal` if that search result was more promising for metadata?
         // Let's implement the basic audio fetch first.
 
-        const readable = tts.toStream(text, {
+        // FIX: Destructure audioStream and await the call
+        const { audioStream } = await tts.toStream(text, {
             rate: rateStr,
             pitch: pitchStr
         });
 
         const chunks: Uint8Array[] = [];
-        // @ts-expect-error - Readable streams are async iterable in modern Node, but TS might complain depending on types
-        for await (const chunk of readable) {
+        
+        // FIX: Iterate over the specific audioStream property
+        for await (const chunk of audioStream) {
             chunks.push(chunk);
         }
 
