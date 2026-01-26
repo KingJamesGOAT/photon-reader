@@ -5,33 +5,20 @@ import { useEdgeTTS } from './useEdgeTTS';
 const CHUNK_SIZE = 50;
 
 export const useRSVP = (isDriver: boolean = true) => {
-  const { 
-    content, wpm, isPlaying, currentIndex, setCurrentIndex, setIsPlaying, isAudioEnabled
-  } = useStore();
+  const content = useStore(state => state.content);
+  const wpm = useStore(state => state.wpm);
+  const isPlaying = useStore(state => state.isPlaying);
+  const currentIndex = useStore(state => state.currentIndex);
+  const setCurrentIndex = useStore(state => state.setCurrentIndex);
+  const setIsPlaying = useStore(state => state.setIsPlaying);
+  const isAudioEnabled = useStore(state => state.isAudioEnabled);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Destructure 'marks' from our new hook
-  // IMPORTANT: useEdgeTTS has its own internal state. 
-  // If isDriver is false, we technically don't need audio state, but we return 'progress' which relies on currentIndex.
-  // We can just call useEdgeTTS() anyway, but its logic (audio listeners) are low cost.
-  // The crucial part is NOT calling 'play', 'pause', 'fetchAudio' from the non-driver instance.
   const { fetchAudio, play, pause, stop, currentTime, duration, isLoading, audioUrl, marks, audioElement, isBlocked } = useEdgeTTS();
   
   const audioStartedRef = useRef(false);
-  const audioOffsetRef = useRef(0); // Where the current chunk starts in the full text
+  const audioOffsetRef = useRef(0); 
 
-  // Support logic
-  // Timer ref manages both standard and fallback timing
-  // --------------------------------------------------------
-
-
-  // --------------------------------------------------------
-  // SEPARATED LOGIC: Fetch vs Sync vs Timer
-  // --------------------------------------------------------
-
-  // 1. AUDIO FETCHING LOGIC
-  // Triggers only when index changes or audio is enabled/disabled
   useEffect(() => {
     if (!isDriver) return;
     if (!isPlaying || currentIndex >= content.length) return;
@@ -61,9 +48,10 @@ export const useRSVP = (isDriver: boolean = true) => {
   }, [isDriver, isPlaying, currentIndex, isAudioEnabled, isLoading, content, wpm, fetchAudio, play, audioElement]);
 
 
-  // 2. SYNC LOGIC (High Frequency)
-  // Triggers on 'currentTime' update. Responsible for MOVING index based on audio.
   useEffect(() => {
+      // NOTE: We do NOT depend on currentIndex here to prevent infinite loops.
+      // We read the latest currentIndex directly from the store state when checking.
+      
       if (!isDriver || !isPlaying || !isAudioEnabled) return;
       
       const isAudioActive = audioElement && !audioElement.paused && !audioElement.ended && audioElement.readyState > 2;
@@ -82,21 +70,20 @@ export const useRSVP = (isDriver: boolean = true) => {
 
           if (relativeIndex !== -1) {
               const absoluteIndex = audioOffsetRef.current + relativeIndex;
-              // Guard: Only update if changed and valid
-              if (absoluteIndex !== currentIndex && absoluteIndex < content.length && absoluteIndex >= 0) {
+              // Check against LATEST store value safely
+              const latestCurrentIndex = useStore.getState().currentIndex;
+              
+              if (absoluteIndex !== latestCurrentIndex && absoluteIndex < content.length && absoluteIndex >= 0) {
                    setCurrentIndex(absoluteIndex);
               }
           }
       }
-  }, [isDriver, isPlaying, isAudioEnabled, currentTime, marks, duration, audioElement, currentIndex, content.length, setCurrentIndex]);
+  }, [isDriver, isPlaying, isAudioEnabled, currentTime, marks, duration, audioElement, content.length, setCurrentIndex]);
 
 
-  // 3. FAIL-SAFE / TIMER LOGIC
-  // Triggers on index change or loading state. Responsible for ADVANCING if audio fails/stalls.
   useEffect(() => {
     if (!isDriver) return;
     
-    // Clear existing timer on any relevant change
     if (timerRef.current) clearTimeout(timerRef.current);
 
     if (!isPlaying || currentIndex >= content.length) {
@@ -106,20 +93,17 @@ export const useRSVP = (isDriver: boolean = true) => {
 
     const isAudioActive = audioElement && !audioElement.paused && !audioElement.ended && audioElement.readyState > 2;
 
-    // Calculate Delay
     const baseInterval = 60000 / wpm;
     const currentWord = content[currentIndex] || '';
     let delay = baseInterval;
     if (/[.?!]/.test(currentWord)) delay *= 1.5;
     else if (currentWord.length > 10) delay *= 1.1;
 
-    // If Audio Mode is ON but Audio is NOT playing (Loading, Blocked, or Error)
     if (isAudioEnabled && !isAudioActive) {
          const isLoadingBuffer = isLoading ? 3000 : 0; 
          
          timerRef.current = setTimeout(() => {
              console.log("[RSVP] Fail-Safe Timer Tick.");
-             // Guard: Don't advance past end
              if (currentIndex + 1 < content.length) {
                  setCurrentIndex(currentIndex + 1);
              } else {
@@ -127,7 +111,6 @@ export const useRSVP = (isDriver: boolean = true) => {
              }
          }, delay + isLoadingBuffer);
     } 
-    // If Audio Mode is OFF (Standard RSVP)
     else if (!isAudioEnabled) {
         if (audioUrl) pause();
         
